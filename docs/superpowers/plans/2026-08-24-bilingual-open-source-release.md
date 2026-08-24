@@ -408,9 +408,11 @@ Set:
 document.documentElement.lang = state.locale;
 document.title = copy.meta.title;
 document.querySelector('meta[name="description"]')?.setAttribute('content', copy.meta.description);
+const skipLink = document.querySelector<HTMLAnchorElement>('.skip-link');
+if (skipLink !== null) skipLink.textContent = copy.common.skipToMain;
 ```
 
-Keep the static `index.html` metadata useful for no-script fallback, with English as the neutral build-time default. Runtime rendering must always correct it to the selected locale.
+Keep the static `index.html` metadata and skip-link text useful for no-script fallback, with English as the neutral build-time default. Runtime rendering must always correct the document language, title, description, and the accessible skip-link label to the selected locale. Add a controller-level or browser assertion that switching to English replaces `跳到主要内容`; renderer-only tests cannot cover this element because it lives outside `root`.
 
 - [ ] **Step 7: Run tests and commit**
 
@@ -449,7 +451,7 @@ interface StoredHistoryV2 {
 }
 ```
 
-Create one valid legacy fixture using the old shape (`primary`/`adjacent` with name, pattern, hook, strengths, pitfalls, relationship need, action; standout with `label`). Assert first `loadHistory(storage)` returns the neutral result, writes a v2 envelope, and a second call returns the same single ID. Add cases for malformed JSON, unknown archetype codes, invalid scores, duplicate IDs, more than three entries, and a failing `setItem` during migration.
+Create one valid legacy fixture using the old rich shape (`primary`/`adjacent` with name, pattern, hook, strengths, pitfalls, relationship need, action; standout with `label`). Also create a transitional v1 fixture containing Task 1's already-neutral `primary`/`adjacent` references and label-free standout, because users may finish a quiz between Tasks 1 and 4. Assert both shapes normalize to the same v2 result contract; first `loadHistory(storage)` writes a v2 envelope, and a second call returns the same single ID. Add cases for malformed JSON, unknown archetype codes, invalid scores, duplicate IDs, more than three entries, and a failing `setItem` during migration.
 
 For deletion, seed progress, v1 history, v2 history, locale, and `another-app`; assert only the four FACET keys disappear.
 
@@ -477,7 +479,7 @@ Validate every score in 0–100, dates/IDs as non-empty strings, archetype codes
 
 1. If a valid v2 envelope exists, return its newest three distinct results.
 2. If the v2 key exists but is malformed, return `[]` and do not trust v1 as a silent fallback.
-3. If no v2 key exists, parse v1, normalize each valid rich result to stable codes/numbers, deduplicate by ID keeping the first newest occurrence, slice to three, and attempt to write v2.
+3. If no v2 key exists, parse v1, accept either a valid old rich result or Task 1's valid transitional neutral result, normalize both to the same stable codes/numbers, deduplicate by ID keeping the first newest occurrence, slice to three, and attempt to write v2.
 4. If migration writing fails, return the normalized in-memory results without throwing; a later load may retry.
 5. Leave the v1 key in place as rollback insurance; all new appends target only v2.
 
@@ -520,6 +522,8 @@ git commit -m "feat: migrate history to locale-neutral v2 records"
 - Modify: `src/app/screens/atlas.ts`
 - Modify: `src/app/screens/history.ts`
 - Modify: `src/app/screens/locale-switcher.ts`
+- Modify: `src/styles/components.css`
+- Modify: `index.html`
 - Modify: `tests/state.test.ts`
 - Modify: `tests/data.test.ts`
 - Modify: `tests/result.test.ts`
@@ -541,7 +545,7 @@ renderAtlas(copy: LocaleCatalog): string;
 renderHistory(history: readonly FacetResult[], copy: LocaleCatalog): string;
 ```
 
-For every renderer, call once with `CATALOGS['zh-CN']` and once with `CATALOGS.en`. Assert `data-screen`, action names, semantic landmarks, and domain codes are identical while visible headings differ. Assert all 12 archetypes render in each locale, eight meters remain, and no `undefined`, `[object Object]`, raw copy key, or Chinese UI text appears in English output. The Chinese question assertion must equal the current approved prompt exactly.
+For every renderer, call once with `CATALOGS['zh-CN']` and once with `CATALOGS.en`. Assert `data-screen`, action names, semantic landmarks, and domain codes are identical while visible headings differ. Assert all 12 archetypes render in each locale, eight meters remain, and no `undefined`, `[object Object]`, raw copy key, or Chinese UI text appears in English output. Select one answer in each locale and assert the visible selected-state label comes from `copy.quiz.selected`; the English markup must not contain `已选`. The Chinese question assertion must equal the current approved prompt exactly.
 
 - [ ] **Step 2: Run screen tests and confirm hard-coded renderers fail**
 
@@ -553,7 +557,7 @@ Expected: FAIL because renderers accept no catalog and read Chinese-rich domain 
 
 - [ ] **Step 3: Convert landing, intro, quiz, atlas, and history to explicit catalog injection**
 
-Add `renderLocaleSwitcher(state.locale, copy)` to every main screen header, including chapter, empty, and error states. Look up questions by `copy.questions[question.id]`; look up archetype copy by stable code. Format dates with:
+Add `renderLocaleSwitcher(copy.meta.locale, copy)` to every main screen header, including chapter, empty, and error states. The renderer signatures in Step 1 intentionally receive a catalog rather than `AppState` except for quiz, so `copy.meta.locale` is the single consistent locale source. Look up questions by `copy.questions[question.id]`; look up archetype copy by stable code. Format dates with:
 
 ```ts
 new Intl.DateTimeFormat(copy.meta.locale, {
@@ -562,6 +566,8 @@ new Intl.DateTimeFormat(copy.meta.locale, {
 ```
 
 Use localized accessible names for navigation, progress, fieldset legends, selected answers, dialogs, score outputs, and status regions. Keep `data-action`, `data-screen`, `data-dimension`, result IDs, question IDs, and archetype codes language-independent.
+
+Remove the hard-coded `content: "已选"` pseudo-element from `src/styles/components.css`. Render the selected-state text as real escaped DOM content from `copy.quiz.selected` (preferred for assistive technology), or expose it through a localized `data-selected-label` consumed by `content: attr(data-selected-label)`. Browser tests in Task 7 must assert the visible English selected state contains no Chinese. The controller metadata update from Task 3 must also localize the static `index.html` skip link on every render.
 
 After these consumers compile, make the final source-data cutover: rename the metadata projections back to the canonical `QUESTIONS` and `ARCHETYPES` exports, delete prompt/name/hook/strength/pitfall/relationship/action fields from them, delete `src/data/copy.ts`, and remove `getLegacyArchetypeCopy`. Update data/result tests to assert the canonical exports contain no display fields. Scoring continues to consume the canonical metadata-only arrays.
 
@@ -605,7 +611,7 @@ Expected: all unit tests PASS; compiled HTML contains both catalogs but no exter
 - [ ] **Step 7: Commit bilingual screens**
 
 ```bash
-git add src/app/controller.ts src/app/screens src/types.ts src/data/questions.ts src/data/archetypes.ts src/data/copy.ts src/domain/scoring.ts src/domain/result.ts tests/state.test.ts tests/data.test.ts tests/result.test.ts
+git add src/app/controller.ts src/app/screens src/styles/components.css index.html src/types.ts src/data/questions.ts src/data/archetypes.ts src/data/copy.ts src/domain/scoring.ts src/domain/result.ts tests/state.test.ts tests/data.test.ts tests/result.test.ts
 git commit -m "feat: render every FACET screen in two languages"
 ```
 
@@ -1003,7 +1009,7 @@ Expected: both SHA-256 values are identical.
 
 - [ ] **Step 5: Perform rendered acceptance with timestamped evidence**
 
-Use a real browser to inspect the final file at 360, 390, 768, 1024, 1280, and 1440px. Cover Chinese/English landing, intro, longest question, chapter transition, normal/free/dual result, atlas, empty/populated history, deletion dialog, share success, keyboard focus, 200% zoom, and reduced motion. Store screenshots/audit JSON under `artifacts/bilingual/`; do not commit transient Playwright reports.
+Use a real browser to inspect the final file at 360, 390, 768, 1024, 1280, and 1440px. Cover Chinese/English landing, intro, longest question, chapter transition, normal/free/dual result, atlas, empty/populated history, deletion dialog, share success, keyboard focus, 200% zoom, and reduced motion. Store screenshots/audit JSON under the gitignored `artifacts/bilingual/` directory as local QA evidence; do not force-add it. Record its path, state matrix, relevant hashes, and findings in `QA-REPORT.md` so the committed repository retains an auditable summary without checking in transient Playwright evidence.
 
 - [ ] **Step 6: Update the QA report with observed facts**
 
@@ -1012,12 +1018,12 @@ Record the execution timestamp in Asia/Shanghai, exact test counts, browser proj
 - [ ] **Step 7: Commit only repository QA evidence and confirm clean status**
 
 ```bash
-git add package.json pnpm-lock.yaml e2e/file.spec.ts playwright.file.config.ts QA-REPORT.md artifacts/bilingual
+git add package.json pnpm-lock.yaml e2e/file.spec.ts playwright.file.config.ts QA-REPORT.md
 git commit -m "test: accept bilingual single-file release"
 git status --short
 ```
 
-Expected: commit succeeds and `git status --short` is empty. The synchronized file under `/outputs` remains the user-facing artifact outside this repository.
+Expected: commit succeeds and `git status --short` is empty; `artifacts/bilingual/` remains ignored by the existing `.gitignore` and is not force-added. The synchronized file under `/outputs` remains the user-facing artifact outside this repository.
 
 ### Task 10: Create the Public GitHub Repository, Deploy Pages, and Verify the Live Product
 
