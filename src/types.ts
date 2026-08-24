@@ -26,6 +26,10 @@ export interface QuestionDefinition {
   timeframe: 'usual' | 'two-weeks';
 }
 
+export const CORE_DIMENSIONS = Object.freeze(['F1', 'F2', 'F3', 'F4', 'F5', 'F6'] as const);
+export const STATE_DIMENSIONS = Object.freeze(['W1', 'W2'] as const);
+export const DIMENSIONS = Object.freeze([...CORE_DIMENSIONS, ...STATE_DIMENSIONS] as const);
+
 export interface Question extends QuestionDefinition {
   prompt: string;
 }

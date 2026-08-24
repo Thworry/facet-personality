@@ -14,6 +14,35 @@ const LEGACY_HISTORY_KEY = 'facet:v1:history';
 const HISTORY_KEY = 'facet:v2:history';
 const LOCALE_KEY = 'facet:v1:locale';
 
+const UNREADABLE_WARNING = {
+  'zh-CN': '检测到无法读取的本地进度',
+  en: 'Some local progress could not be read',
+} as const;
+const CLEAR_STATUS_TEXT = {
+  'zh-CN': '已清除',
+  en: 'FACET unfinished progress, result history, and language preference have been deleted.',
+} as const;
+
+async function unreadableWarningLocator(page: Page): Promise<import('@playwright/test').Locator> {
+  const locale = await page.locator('html').getAttribute('lang');
+  const warning = locale === 'en' ? UNREADABLE_WARNING.en : UNREADABLE_WARNING['zh-CN'];
+  return page.getByText(warning, { exact: false });
+}
+
+async function expectUnreadableWarningVisible(page: Page): Promise<void> {
+  await expect(await unreadableWarningLocator(page)).toBeVisible();
+}
+
+async function expectUnreadableWarningHidden(page: Page): Promise<void> {
+  await expect(await unreadableWarningLocator(page)).toHaveCount(0);
+}
+
+async function expectClearStatusText(page: Page): Promise<void> {
+  const locale = await page.locator('html').getAttribute('lang');
+  const expected = locale === 'en' ? CLEAR_STATUS_TEXT.en : CLEAR_STATUS_TEXT['zh-CN'];
+  await expect(page.locator('[data-history-status]')).toContainText(expected);
+}
+
 async function expectQuestion(page: Page, position: number): Promise<void> {
   await expect(page.locator('[data-screen="quiz"] .progress-copy')).toHaveText(`第 ${position} 题，共 32 题`);
 }
@@ -183,12 +212,12 @@ test('clears FACET progress and history without removing unrelated local data', 
 
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.getByText('检测到无法读取的本地进度', { exact: false })).toBeVisible();
+  await expectUnreadableWarningVisible(page);
   await page.locator('[data-action="show-history"]').click();
   await page.locator('[data-action="request-clear"]').click();
-  await expect(page.getByRole('dialog', { name: '确认清除？' })).toBeVisible();
+  await expect(page.locator('[data-action="confirm-clear"]')).toBeVisible();
   await page.locator('[data-action="confirm-clear"]').click();
-  await expect(page.locator('[data-history-status]')).toContainText('已清除');
+  await expectClearStatusText(page);
 
   const localData = await page.evaluate(({ progressKey, legacyHistoryKey, historyKey, localeKey }) => ({
     progress: window.localStorage.getItem(progressKey),
@@ -216,7 +245,7 @@ test('clears FACET progress and history without removing unrelated local data', 
 
   await page.locator('[data-action="back"]').click();
   await expect(page.locator('[data-screen="landing"]')).toBeVisible();
-  await expect(page.getByText('检测到无法读取的本地进度', { exact: false })).toHaveCount(0);
+  await expectUnreadableWarningHidden(page);
 });
 
 test('clears FACET only on success and retains the unreadable-progress warning on failure', async ({ page }) => {
@@ -232,7 +261,7 @@ test('clears FACET only on success and retains the unreadable-progress warning o
   }, PROGRESS_KEY);
 
   await page.goto('/');
-  await expect(page.getByText('检测到无法读取的本地进度', { exact: false })).toBeVisible();
+  await expectUnreadableWarningVisible(page);
   await page.locator('[data-action="show-history"]').click();
   await page.locator('[data-action="request-clear"]').click();
   await page.locator('[data-action="confirm-clear"]').click();
@@ -240,7 +269,7 @@ test('clears FACET only on success and retains the unreadable-progress warning o
 
   await page.locator('[data-action="back"]').click();
   await expect(page.locator('[data-screen="landing"]')).toBeVisible();
-  await expect(page.getByText('检测到无法读取的本地进度', { exact: false })).toBeVisible();
+  await expectUnreadableWarningVisible(page);
   await expect.poll(() => page.evaluate((key) => window.localStorage.getItem(key), PROGRESS_KEY))
     .not.toBeNull();
 });

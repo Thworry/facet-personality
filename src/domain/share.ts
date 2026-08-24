@@ -1,5 +1,4 @@
-import { BALANCED_STANDOUT, DIMENSION_COPY, WEATHER_COPY } from '../data/copy';
-import { getLegacyArchetypeCopy } from '../data/archetypes';
+import { CATALOGS } from '../i18n/catalog';
 import type { FacetResult } from '../types';
 
 export interface ShareCanvasContext {
@@ -81,19 +80,20 @@ function drawTransitLine(context: ShareCanvasContext): void {
   }
 }
 
-function standoutText(standout: FacetResult['standout']): string {
-  if (standout.dimension === 'BALANCED') {
-    return BALANCED_STANDOUT.label;
+function standoutText(result: FacetResult): string {
+  const catalog = CATALOGS['zh-CN'];
+  if (result.standout.dimension === 'BALANCED') {
+    return catalog.result.balancedStandout;
   }
 
-  const dimensionCopy = DIMENSION_COPY[standout.dimension];
-  if (standout.direction === 'low') {
+  const dimensionCopy = catalog.dimensions[result.standout.dimension];
+  if (result.standout.direction === 'low') {
     return dimensionCopy.lowLabel;
   }
-  if (standout.direction === 'high') {
+  if (result.standout.direction === 'high') {
     return dimensionCopy.highLabel;
   }
-  throw new Error(`Invalid standout direction for ${standout.dimension}: ${standout.direction}`);
+  throw new Error(`Invalid standout direction for ${result.standout.dimension}: ${result.standout.direction}`);
 }
 
 export function drawShareCard(
@@ -105,11 +105,12 @@ export function drawShareCard(
     throw new Error('Share-card scale must be a positive number');
   }
 
-  const weather = WEATHER_COPY[result.weather.code];
-  const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
-  const adjacentCopy = getLegacyArchetypeCopy(result.adjacent.code);
+  const catalog = CATALOGS['zh-CN'];
+  const weather = catalog.weather[result.weather.code];
+  const primaryCopy = catalog.archetypes[result.primary.code];
+  const adjacentCopy = catalog.archetypes[result.adjacent.code];
   const title = result.clarity === 'free'
-    ? 'FREE · 自由切面'
+    ? catalog.result.freeFacet
     : `${result.primary.code} · ${primaryCopy.name}`;
 
   context.save();
@@ -124,7 +125,7 @@ export function drawShareCard(
 
   context.fillStyle = '#C9F66F';
   context.font = '700 34px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-  context.fillText('FACET / FCT', 88, 112);
+  context.fillText(catalog.share.brand, 88, 112);
 
   context.fillStyle = '#F8F5EF';
   context.font = '700 76px STSong, Songti SC, SimSun, serif';
@@ -132,27 +133,27 @@ export function drawShareCard(
 
   if (result.clarity === 'free') {
     context.font = '600 36px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
-    context.fillText(`最近参考：${result.primary.code} · ${primaryCopy.name}`, 88, 456);
+    context.fillText(`${catalog.share.recentReference}：${result.primary.code} · ${primaryCopy.name}`, 88, 456);
   }
 
   context.fillStyle = '#F4553D';
   context.font = '700 34px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-  context.fillText(`${result.weather.code} · ${weather.name}${result.weather.isBoundary ? ' / 交界' : ''}`, 88, 570);
+  context.fillText(`${result.weather.code} · ${weather.name}${result.weather.isBoundary ? ` / ${catalog.share.boundary}` : ''}`, 88, 570);
 
   context.fillStyle = '#F8F5EF';
   context.font = '500 40px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
-  const afterStandout = drawWrappedText(context, `突出切面：${standoutText(result.standout)}`, 88, 690, 904, 58, 3);
+  const afterStandout = drawWrappedText(context, `${catalog.share.standout}：${standoutText(result)}`, 88, 690, 904, 58, 3);
 
   context.fillStyle = '#D5CFC4';
   context.font = '500 31px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
-  context.fillText(`相邻切面：${result.adjacent.code} · ${adjacentCopy.name}`, 88, afterStandout + 46);
+  context.fillText(`${catalog.share.adjacent}：${result.adjacent.code} · ${adjacentCopy.name}`, 88, afterStandout + 46);
 
   drawTransitLine(context);
 
   context.fillStyle = '#171716';
   context.font = '700 30px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-  context.fillText('32 SCENES / 6 CORE LINES / 2 WEATHER SIGNALS', 88, 1268);
+  context.fillText(catalog.share.facts, 88, 1268);
   context.font = '500 28px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
-  context.fillText('娱乐向自我观察，不用于诊断、招聘或重大决策。', 88, 1350);
+  context.fillText(catalog.share.disclaimer, 88, 1350);
   context.restore();
 }

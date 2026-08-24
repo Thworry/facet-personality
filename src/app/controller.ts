@@ -39,20 +39,25 @@ export interface ControllerOptions {
   answerDelayMs?: number;
 }
 
-function renderScreen(state: AppState, history: ReturnType<typeof loadHistory>, shareMessage: string): string {
+function renderScreen(
+  state: AppState,
+  history: ReturnType<typeof loadHistory>,
+  shareMessage: string,
+  localeCopy: LocaleCatalog,
+): string {
   switch (state.route) {
     case 'landing':
-      return renderLanding();
+      return renderLanding(localeCopy);
     case 'intro':
-      return renderIntro();
+      return renderIntro(localeCopy);
     case 'quiz':
-      return renderQuiz(state);
+      return renderQuiz(state, localeCopy);
     case 'result':
-      return state.result === null ? renderLanding() : renderResult(state.result, shareMessage);
+      return state.result === null ? renderLanding(localeCopy) : renderResult(state.result, localeCopy, shareMessage);
     case 'atlas':
-      return renderAtlas();
+      return renderAtlas(localeCopy);
     case 'history':
-      return renderHistory(history);
+      return renderHistory(history, localeCopy);
   }
 }
 
@@ -117,13 +122,13 @@ export function createAppController(
 
   function render(moveFocus: boolean): void {
     const copy = getCatalog(state.locale);
-    root.innerHTML = renderScreen(state, loadHistory(storage), shareMessage);
+    root.innerHTML = renderScreen(state, loadHistory(storage), shareMessage, copy);
     syncDocumentMetadata(copy);
     if (hadUnreadableProgress && state.route === 'landing') {
       const notice = document.createElement('p');
       notice.className = 'inline-notice';
       notice.setAttribute('role', 'status');
-      notice.textContent = '检测到无法读取的本地进度。旧记录仍保留；开始新测试后会用新的有效进度替换。';
+      notice.textContent = copy.feedback.unreadableProgress;
       root.querySelector('.landing-hero')?.append(notice);
     }
     if (moveFocus) {
@@ -174,9 +179,10 @@ export function createAppController(
       dispatch({ type: 'SHOW_RESULT', result });
     } catch (error) {
       const message = error instanceof Error ? error.message : '结果生成失败';
+      const currentCopy = getCatalog(state.locale);
       const status = root.querySelector<HTMLElement>('[data-quiz-status]');
       if (status !== null) {
-        status.textContent = `${message}。请检查最后一题后再试。`;
+        status.textContent = `${message}。${currentCopy.feedback.quizResultFailure}`;
       }
     }
   }

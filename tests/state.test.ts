@@ -16,9 +16,9 @@ import { renderAtlas } from '../src/app/screens/atlas';
 import { renderHistory } from '../src/app/screens/history';
 import { renderResult } from '../src/app/screens/result';
 import { buildFacetResult } from '../src/domain/result';
-import { getLegacyArchetypeCopy } from '../src/data/archetypes';
 import { createAppController } from '../src/app/controller';
 import { LOCALE_KEY } from '../src/i18n/locale';
+import { CATALOGS } from '../src/i18n/catalog';
 
 const canonicalOrder = QUESTIONS.map((question) => question.id);
 
@@ -357,7 +357,7 @@ describe('controller locale metadata', () => {
 
 describe('core screen markup', () => {
   it('renders the approved landing facts, privacy promise, and primary routes', () => {
-    const html = renderLanding();
+    const html = renderLanding(CATALOGS['zh-CN']);
 
     expect(html).toContain('你不是一个类型');
     expect(html).toContain('32题');
@@ -369,7 +369,7 @@ describe('core screen markup', () => {
   });
 
   it('explains both timeframes and all five response labels before starting', () => {
-    const html = renderIntro();
+    const html = renderIntro(CATALOGS['zh-CN']);
 
     expect(html).toContain('大多数情况下');
     expect(html).toContain('最近两周');
@@ -388,7 +388,7 @@ describe('core screen markup', () => {
       order: [...canonicalOrder],
       answers: { 1: 4 },
     }, 'zh-CN');
-    const html = renderQuiz(state);
+    const html = renderQuiz(state, CATALOGS['zh-CN']);
 
     expect(html).toContain('第 1 题，共 32 题');
     expect(html).toContain('aria-hidden="true"');
@@ -408,7 +408,7 @@ describe('core screen markup', () => {
       }, 'zh-CN'),
       chapterIntroVisible: true,
     };
-    const html = renderQuiz(state);
+    const html = renderQuiz(state, CATALOGS['zh-CN']);
 
     expect(html).toContain('接下来只看最近两周');
     expect(html).toContain('data-action="next"');
@@ -421,9 +421,9 @@ describe('result and archive markup', () => {
   const result = buildFacetResult(answers, 'screen-result', '2026-08-24T00:00:00.000Z');
 
   it('renders the complete layered result with eight accessible meters', () => {
-    const html = renderResult(result);
-    const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
-    const adjacentCopy = getLegacyArchetypeCopy(result.adjacent.code);
+    const html = renderResult(result, CATALOGS['zh-CN']);
+    const primaryCopy = CATALOGS['zh-CN'].archetypes[result.primary.code];
+    const adjacentCopy = CATALOGS['zh-CN'].archetypes[result.adjacent.code];
 
     expect(html).toContain(primaryCopy.name);
     expect(html).toContain(adjacentCopy.name);
@@ -437,13 +437,13 @@ describe('result and archive markup', () => {
   });
 
   it('leads with free-facet language when no single template fits', () => {
-    const html = renderResult({ ...result, clarity: 'free' });
+    const html = renderResult({ ...result, clarity: 'free' }, CATALOGS['zh-CN']);
     expect(html).toContain('<h1 id="screen-title" tabindex="-1">自由切面</h1>');
     expect(html).toContain('最近的两个参考');
   });
 
   it('lists all twelve archetypes without rarity claims', () => {
-    const html = renderAtlas();
+    const html = renderAtlas(CATALOGS['zh-CN']);
     expect(html.match(/data-archetype=/g)).toHaveLength(12);
     expect(html).toContain('ARCHIVE');
     expect(html).toContain('TOWER');
@@ -452,7 +452,7 @@ describe('result and archive markup', () => {
   });
 
   it('renders local history entries and an explicit confirmation dialog', () => {
-    const html = renderHistory([result]);
+    const html = renderHistory([result], CATALOGS['zh-CN']);
     expect(html).toContain('screen-result');
     expect(html).toContain('data-action="open-result"');
     expect(html).toContain('<dialog');

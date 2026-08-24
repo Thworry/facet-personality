@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { getLegacyArchetypeCopy } from '../src/data/archetypes';
+import { CATALOGS } from '../src/i18n/catalog';
 import { QUESTIONS } from '../src/data/questions';
+import { ARCHETYPE_DEFINITIONS } from '../src/data/archetypes';
 import { buildFacetResult } from '../src/domain/result';
 import { LOCALE_KEY } from '../src/i18n/locale';
 import {
@@ -66,14 +67,35 @@ function makeResult(id: string, createdAt: string) {
 
 function makeLegacyRichResult(id: string, createdAt: string) {
   const result = makeResult(id, createdAt);
+  const primaryDefinition = ARCHETYPE_DEFINITIONS.find((definition) => definition.code === result.primary.code);
+  const adjacentDefinition = ARCHETYPE_DEFINITIONS.find((definition) => definition.code === result.adjacent.code);
+  if (primaryDefinition === undefined || adjacentDefinition === undefined) {
+    throw new Error(`Unknown archetype code: ${result.primary.code} / ${result.adjacent.code}`);
+  }
+  const zhPrimary = CATALOGS['zh-CN'].archetypes[result.primary.code];
+  const zhAdjacent = CATALOGS['zh-CN'].archetypes[result.adjacent.code];
   return {
     ...result,
     primary: {
-      ...getLegacyArchetypeCopy(result.primary.code),
+      code: result.primary.code,
+      name: zhPrimary.name,
+      pattern: primaryDefinition.pattern,
+      hook: zhPrimary.hook,
+      strengths: [...zhPrimary.strengths],
+      pitfalls: [...zhPrimary.pitfalls],
+      relationshipNeed: zhPrimary.relationshipNeed,
+      action: zhPrimary.action,
       distance: result.primary.distance,
     },
     adjacent: {
-      ...getLegacyArchetypeCopy(result.adjacent.code),
+      code: result.adjacent.code,
+      name: zhAdjacent.name,
+      pattern: adjacentDefinition.pattern,
+      hook: zhAdjacent.hook,
+      strengths: [...zhAdjacent.strengths],
+      pitfalls: [...zhAdjacent.pitfalls],
+      relationshipNeed: zhAdjacent.relationshipNeed,
+      action: zhAdjacent.action,
       distance: result.adjacent.distance,
     },
     standout: {

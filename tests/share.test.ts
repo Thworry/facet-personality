@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { QUESTIONS } from '../src/data/questions';
-import { BALANCED_STANDOUT, DIMENSION_COPY } from '../src/data/copy';
-import { getLegacyArchetypeCopy } from '../src/data/archetypes';
+import { CATALOGS } from '../src/i18n/catalog';
 import { buildFacetResult } from '../src/domain/result';
 import { drawShareCard, type ShareCanvasContext } from '../src/domain/share';
 import type { Answers } from '../src/types';
@@ -44,23 +43,25 @@ const neutralAnswers = Object.fromEntries(QUESTIONS.map((question) => [question.
 describe('local share-card renderer', () => {
   it('draws the required identity, weather, standout, adjacent, and boundary copy', () => {
     const result = buildFacetResult(neutralAnswers, 'share-result', '2026-08-24T00:00:00.000Z');
-    const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
-    const adjacentCopy = getLegacyArchetypeCopy(result.adjacent.code);
+    const zhCatalog = CATALOGS['zh-CN'];
+    const primaryCopy = zhCatalog.archetypes[result.primary.code];
+    const adjacentCopy = zhCatalog.archetypes[result.adjacent.code];
+    const dimensions = zhCatalog.dimensions;
     const standout = (() => {
       const dimension = result.standout.dimension;
       if (result.standout.direction === 'balanced') {
-        return BALANCED_STANDOUT.label;
+        return zhCatalog.result.balancedStandout;
       }
       if (result.standout.direction === 'low') {
         if (dimension === 'BALANCED') {
           throw new Error('Balanced result should not have low direction');
         }
-        return DIMENSION_COPY[dimension].lowLabel;
+        return dimensions[dimension].lowLabel;
       }
       if (dimension === 'BALANCED') {
         throw new Error('Balanced result should not have high direction');
       }
-      return DIMENSION_COPY[dimension].highLabel;
+      return dimensions[dimension].highLabel;
     })();
     const context = new RecordingContext();
 
@@ -79,7 +80,7 @@ describe('local share-card renderer', () => {
 
   it('applies the requested drawing scale without changing card copy', () => {
     const result = buildFacetResult(neutralAnswers, 'scaled-result', '2026-08-24T00:00:00.000Z');
-    const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
+    const primaryCopy = CATALOGS['zh-CN'].archetypes[result.primary.code];
     const context = new RecordingContext();
 
     drawShareCard(context, result, 2);

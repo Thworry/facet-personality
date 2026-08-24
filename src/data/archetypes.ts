@@ -143,12 +143,3 @@ export function getArchetypeDefinition(code: string): ArchetypeDefinition {
   }
   return definition;
 }
-
-/** Temporary Chinese compatibility lookup; remove after locale catalogs reach all renderers. */
-export function getLegacyArchetypeCopy(code: string): Archetype {
-  const archetype = ARCHETYPES.find((candidate) => candidate.code === code);
-  if (archetype === undefined) {
-    throw new Error(`Unknown archetype code: ${code}`);
-  }
-  return archetype;
-}

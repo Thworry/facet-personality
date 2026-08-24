@@ -330,13 +330,6 @@
   background: var(--color-acid);
 }
 
-.answer-option[data-selected="true"] label::after {
-  content: "已选";
-  font-family: var(--font-mono);
-  font-size: var(--type-caption);
-  font-weight: 800;
-}
-
 .answer-key {
   display: grid;
   width: 2rem;

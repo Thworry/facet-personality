@@ -1,5 +1,4 @@
 import { ARCHETYPE_DEFINITIONS } from '../data/archetypes';
-import { CORE_DIMENSIONS, DIMENSIONS } from '../data/copy';
 import { QUESTION_DEFINITIONS } from '../data/questions';
 import type {
   Answers,
@@ -11,6 +10,7 @@ import type {
   RankedArchetypeResult,
   StateScores,
 } from '../types';
+import { CORE_DIMENSIONS, DIMENSIONS } from '../types';
 
 const LEVEL_VALUE: Readonly<Record<Level, number>> = Object.freeze({
   L: 0.25,

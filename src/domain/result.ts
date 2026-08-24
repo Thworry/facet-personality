@@ -1,4 +1,3 @@
-import { CORE_DIMENSIONS } from '../data/copy';
 import { rankArchetypes, scoreDimensions } from './scoring';
 import type {
   Answers,
@@ -9,6 +8,7 @@ import type {
   StateScores,
   WeatherResult,
 } from '../types';
+import { CORE_DIMENSIONS } from '../types';
 
 const FLOAT_TOLERANCE = 1e-12;
 
