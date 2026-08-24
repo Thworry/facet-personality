@@ -5,19 +5,38 @@ export type Direction = 'forward' | 'reverse';
 export type Level = 'L' | 'M' | 'H';
 export type WeatherCode = 'CLEAR' | 'MIST' | 'TURBO' | 'STORM';
 export type Clarity = 'dual' | 'leaning' | 'clear' | 'free';
+export type ArchetypeCode =
+  | 'BUFFER'
+  | 'BOOST'
+  | 'NEST'
+  | 'ARCHIVE'
+  | 'SIGNAL'
+  | 'PATCH'
+  | 'TOWER'
+  | 'SCOUT'
+  | 'RADAR'
+  | 'PRISM'
+  | 'ROUTER'
+  | 'BRIDGE';
 
-export interface Question {
+export interface QuestionDefinition {
   id: number;
   dimension: DimensionCode;
   direction: Direction;
-  prompt: string;
   timeframe: 'usual' | 'two-weeks';
 }
 
-export interface Archetype {
-  code: string;
-  name: string;
+export interface Question extends QuestionDefinition {
+  prompt: string;
+}
+
+export interface ArchetypeDefinition {
+  code: ArchetypeCode;
   pattern: readonly [Level, Level, Level, Level, Level, Level];
+}
+
+export interface Archetype extends ArchetypeDefinition {
+  name: string;
   hook: string;
   strengths: readonly [string, string, string];
   pitfalls: readonly [string, string, string];
@@ -29,7 +48,13 @@ export type Answers = Partial<Record<number, 1 | 2 | 3 | 4 | 5>>;
 export type CoreScores = Record<CoreDimension, number>;
 export type StateScores = Record<StateDimension, number>;
 
+/** @deprecated Rich Chinese source shape retained only until catalog injection completes. */
 export interface RankedArchetype extends Archetype {
+  distance: number;
+}
+
+export interface RankedArchetypeResult {
+  code: ArchetypeCode;
   distance: number;
 }
 
@@ -41,7 +66,6 @@ export interface WeatherResult {
 export interface StandoutResult {
   dimension: CoreDimension | 'BALANCED';
   direction: 'low' | 'high' | 'balanced';
-  label: string;
 }
 
 export interface FacetResult {
@@ -49,8 +73,8 @@ export interface FacetResult {
   createdAt: string;
   coreScores: CoreScores;
   stateScores: StateScores;
-  primary: RankedArchetype;
-  adjacent: RankedArchetype;
+  primary: RankedArchetypeResult;
+  adjacent: RankedArchetypeResult;
   clarity: Clarity;
   weather: WeatherResult;
   standout: StandoutResult;

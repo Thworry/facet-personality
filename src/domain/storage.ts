@@ -1,10 +1,11 @@
+import { ARCHETYPE_DEFINITIONS } from '../data/archetypes';
 import type {
   Answers,
-  Archetype,
+  ArchetypeCode,
   Clarity,
   CoreScores,
   FacetResult,
-  RankedArchetype,
+  RankedArchetypeResult,
   StandoutResult,
   StateScores,
   WeatherResult,
@@ -101,34 +102,24 @@ export function clearProgress(storage: Storage = localStorage): boolean {
   }
 }
 
-const LEVELS = new Set(['L', 'M', 'H']);
 const CLARITIES = new Set<Clarity>(['dual', 'leaning', 'clear', 'free']);
 const WEATHER_CODES = new Set<WeatherResult['code']>(['CLEAR', 'MIST', 'TURBO', 'STORM']);
 const CORE_CODES = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6'] as const;
+const ARCHETYPE_CODES = new Set<ArchetypeCode>(
+  ARCHETYPE_DEFINITIONS.map((archetype) => archetype.code),
+);
 
-function isStringTuple(value: unknown): value is readonly [string, string, string] {
-  return Array.isArray(value)
-    && value.length === 3
-    && value.every((entry) => typeof entry === 'string');
+function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const actualKeys = Object.keys(value);
+  return actualKeys.length === keys.length && actualKeys.every((key) => keys.includes(key));
 }
 
-function isArchetype(value: unknown): value is Archetype {
+function isRankedArchetypeResult(value: unknown): value is RankedArchetypeResult {
   return isRecord(value)
+    && hasOnlyKeys(value, ['code', 'distance'])
     && typeof value.code === 'string'
-    && typeof value.name === 'string'
-    && Array.isArray(value.pattern)
-    && value.pattern.length === 6
-    && value.pattern.every((level) => typeof level === 'string' && LEVELS.has(level))
-    && typeof value.hook === 'string'
-    && isStringTuple(value.strengths)
-    && isStringTuple(value.pitfalls)
-    && typeof value.relationshipNeed === 'string'
-    && typeof value.action === 'string';
-}
-
-function isRankedArchetype(value: unknown): value is RankedArchetype {
-  return isArchetype(value)
-    && isNumberInRange((value as unknown as Record<string, unknown>).distance, 0, Number.MAX_VALUE);
+    && ARCHETYPE_CODES.has(value.code as ArchetypeCode)
+    && isNumberInRange(value.distance, 0, Number.MAX_VALUE);
 }
 
 function isCoreScores(value: unknown): value is CoreScores {
@@ -150,7 +141,7 @@ function isWeather(value: unknown): value is WeatherResult {
 }
 
 function isStandout(value: unknown): value is StandoutResult {
-  if (!isRecord(value) || typeof value.label !== 'string') {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['dimension', 'direction'])) {
     return false;
   }
 
@@ -171,8 +162,8 @@ function isFacetResult(value: unknown): value is FacetResult {
     && value.createdAt.length > 0
     && isCoreScores(value.coreScores)
     && isStateScores(value.stateScores)
-    && isRankedArchetype(value.primary)
-    && isRankedArchetype(value.adjacent)
+    && isRankedArchetypeResult(value.primary)
+    && isRankedArchetypeResult(value.adjacent)
     && typeof value.clarity === 'string'
     && CLARITIES.has(value.clarity as Clarity)
     && isWeather(value.weather)
@@ -207,4 +198,3 @@ export function clearAllLocalData(storage: Storage = localStorage): boolean {
   }
   return success;
 }
-

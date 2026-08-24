@@ -1,6 +1,22 @@
-import type { FacetResult } from '../../types';
-import { WEATHER_COPY } from '../../data/copy';
+import { getLegacyArchetypeCopy } from '../../data/archetypes';
+import { BALANCED_STANDOUT, DIMENSION_COPY, WEATHER_COPY } from '../../data/copy';
+import type { FacetResult, StandoutResult } from '../../types';
 import { escapeHtml } from '../html';
+
+function getLegacyStandoutLabel(standout: StandoutResult): string {
+  if (standout.dimension === 'BALANCED') {
+    return BALANCED_STANDOUT.label;
+  }
+
+  const copy = DIMENSION_COPY[standout.dimension];
+  if (standout.direction === 'low') {
+    return copy.lowLabel;
+  }
+  if (standout.direction === 'high') {
+    return copy.highLabel;
+  }
+  throw new Error(`Invalid standout direction for ${standout.dimension}: ${standout.direction}`);
+}
 
 function formatDate(iso: string): string {
   const date = new Date(iso);
@@ -39,13 +55,15 @@ export function renderHistory(history: readonly FacetResult[]): string {
         <ol class="history-list">
           ${history.slice(0, 3).map((result) => {
             const weather = WEATHER_COPY[result.weather.code];
-            const title = result.clarity === 'free' ? 'FREE · 自由切面' : `${result.primary.code} · ${result.primary.name}`;
+            const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
+            const standoutLabel = getLegacyStandoutLabel(result.standout);
+            const title = result.clarity === 'free' ? 'FREE · 自由切面' : `${result.primary.code} · ${primaryCopy.name}`;
             return `
               <li>
                 <article data-result-id="${escapeHtml(result.id)}">
                   <time datetime="${escapeHtml(result.createdAt)}">${escapeHtml(formatDate(result.createdAt))}</time>
                   <h2>${escapeHtml(title)}</h2>
-                  <p>${result.weather.code} · ${escapeHtml(weather.name)} · ${escapeHtml(result.standout.label)}</p>
+                  <p>${result.weather.code} · ${escapeHtml(weather.name)} · ${escapeHtml(standoutLabel)}</p>
                   <button class="button button--secondary" type="button" data-action="open-result" data-result-id="${escapeHtml(result.id)}">打开这次结果</button>
                 </article>
               </li>

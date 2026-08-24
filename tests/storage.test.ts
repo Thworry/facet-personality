@@ -145,6 +145,17 @@ describe('result history storage', () => {
     expect(loadHistory(storage)[0]?.createdAt).toBe('2026-08-09T00:00:00.000Z');
   });
 
+  it('persists only stable archetype and standout references', () => {
+    const storage = new MemoryStorage();
+
+    expect(appendHistory(makeResult('neutral', '2026-08-24T00:00:00.000Z'), storage)).toBe(true);
+
+    const [saved] = loadHistory(storage);
+    expect(saved?.primary).toEqual({ code: expect.any(String), distance: expect.any(Number) });
+    expect(saved?.adjacent).toEqual({ code: expect.any(String), distance: expect.any(Number) });
+    expect(saved?.standout).not.toHaveProperty('label');
+  });
+
   it('returns an empty history for malformed or invalid payloads', () => {
     const storage = new MemoryStorage();
     storage.setItem(HISTORY_KEY, '{not-json');
@@ -166,4 +177,3 @@ describe('result history storage', () => {
     expect(storage.getItem('another-app')).toBe('keep me');
   });
 });
-

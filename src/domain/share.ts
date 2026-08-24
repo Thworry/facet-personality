@@ -1,4 +1,5 @@
-import { WEATHER_COPY } from '../data/copy';
+import { BALANCED_STANDOUT, DIMENSION_COPY, WEATHER_COPY } from '../data/copy';
+import { getLegacyArchetypeCopy } from '../data/archetypes';
 import type { FacetResult } from '../types';
 
 export interface ShareCanvasContext {
@@ -80,6 +81,21 @@ function drawTransitLine(context: ShareCanvasContext): void {
   }
 }
 
+function standoutText(standout: FacetResult['standout']): string {
+  if (standout.dimension === 'BALANCED') {
+    return BALANCED_STANDOUT.label;
+  }
+
+  const dimensionCopy = DIMENSION_COPY[standout.dimension];
+  if (standout.direction === 'low') {
+    return dimensionCopy.lowLabel;
+  }
+  if (standout.direction === 'high') {
+    return dimensionCopy.highLabel;
+  }
+  throw new Error(`Invalid standout direction for ${standout.dimension}: ${standout.direction}`);
+}
+
 export function drawShareCard(
   context: ShareCanvasContext,
   result: FacetResult,
@@ -90,9 +106,11 @@ export function drawShareCard(
   }
 
   const weather = WEATHER_COPY[result.weather.code];
+  const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
+  const adjacentCopy = getLegacyArchetypeCopy(result.adjacent.code);
   const title = result.clarity === 'free'
     ? 'FREE · 自由切面'
-    : `${result.primary.code} · ${result.primary.name}`;
+    : `${result.primary.code} · ${primaryCopy.name}`;
 
   context.save();
   context.scale(scale, scale);
@@ -114,7 +132,7 @@ export function drawShareCard(
 
   if (result.clarity === 'free') {
     context.font = '600 36px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
-    context.fillText(`最近参考：${result.primary.code} · ${result.primary.name}`, 88, 456);
+    context.fillText(`最近参考：${result.primary.code} · ${primaryCopy.name}`, 88, 456);
   }
 
   context.fillStyle = '#F4553D';
@@ -123,11 +141,11 @@ export function drawShareCard(
 
   context.fillStyle = '#F8F5EF';
   context.font = '500 40px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
-  const afterStandout = drawWrappedText(context, `突出切面：${result.standout.label}`, 88, 690, 904, 58, 3);
+  const afterStandout = drawWrappedText(context, `突出切面：${standoutText(result.standout)}`, 88, 690, 904, 58, 3);
 
   context.fillStyle = '#D5CFC4';
   context.font = '500 31px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
-  context.fillText(`相邻切面：${result.adjacent.code} · ${result.adjacent.name}`, 88, afterStandout + 46);
+  context.fillText(`相邻切面：${result.adjacent.code} · ${adjacentCopy.name}`, 88, afterStandout + 46);
 
   drawTransitLine(context);
 

@@ -1,14 +1,14 @@
-import { ARCHETYPES } from '../data/archetypes';
+import { ARCHETYPE_DEFINITIONS } from '../data/archetypes';
 import { CORE_DIMENSIONS, DIMENSIONS } from '../data/copy';
-import { QUESTIONS } from '../data/questions';
+import { QUESTION_DEFINITIONS } from '../data/questions';
 import type {
   Answers,
-  Archetype,
+  ArchetypeDefinition,
   CoreScores,
   Direction,
   Level,
-  Question,
-  RankedArchetype,
+  QuestionDefinition,
+  RankedArchetypeResult,
   StateScores,
 } from '../types';
 
@@ -23,7 +23,7 @@ export function keyedValue(value: 1 | 2 | 3 | 4 | 5, direction: Direction): numb
 }
 
 export function scoreDimension(
-  questions: readonly Pick<Question, 'id' | 'direction'>[],
+  questions: readonly Pick<QuestionDefinition, 'id' | 'direction'>[],
   answers: Answers,
 ): number {
   if (questions.length === 0) {
@@ -48,21 +48,23 @@ export interface DimensionScores {
 }
 
 export function scoreDimensions(answers: Answers): CoreScores & StateScores {
-  for (const question of QUESTIONS) {
+  for (const question of QUESTION_DEFINITIONS) {
     if (answers[question.id] === undefined) {
       throw new Error(`Missing answer for question ${question.id}`);
     }
   }
 
   const entries = DIMENSIONS.map((dimension) => {
-    const items = QUESTIONS.filter((question) => question.dimension === dimension);
+    const items = QUESTION_DEFINITIONS.filter((question) => question.dimension === dimension);
     return [dimension, scoreDimension(items, answers)] as const;
   });
 
   return Object.freeze(Object.fromEntries(entries)) as CoreScores & StateScores;
 }
 
-export function patternToCentroid(pattern: Archetype['pattern']): readonly [number, number, number, number, number, number] {
+export function patternToCentroid(
+  pattern: ArchetypeDefinition['pattern'],
+): readonly [number, number, number, number, number, number] {
   return [
     LEVEL_VALUE[pattern[0]],
     LEVEL_VALUE[pattern[1]],
@@ -73,7 +75,10 @@ export function patternToCentroid(pattern: Archetype['pattern']): readonly [numb
   ];
 }
 
-export function normalizedDistance(scores: CoreScores, pattern: Archetype['pattern']): number {
+export function normalizedDistance(
+  scores: CoreScores,
+  pattern: ArchetypeDefinition['pattern'],
+): number {
   const values = CORE_DIMENSIONS.map((code) => scores[code] / 100);
   const centroid = patternToCentroid(pattern);
   const mse = values.reduce(
@@ -83,25 +88,14 @@ export function normalizedDistance(scores: CoreScores, pattern: Archetype['patte
   return Math.sqrt(mse);
 }
 
-function cloneRanked(archetype: Archetype, distance: number): RankedArchetype {
-  const pattern = Object.freeze([...archetype.pattern]) as unknown as Archetype['pattern'];
-  const strengths = Object.freeze([...archetype.strengths]) as unknown as Archetype['strengths'];
-  const pitfalls = Object.freeze([...archetype.pitfalls]) as unknown as Archetype['pitfalls'];
-
-  return Object.freeze({
-    ...archetype,
-    pattern,
-    strengths,
-    pitfalls,
-    distance,
-  });
-}
-
 export function rankArchetypes(
   scores: CoreScores,
-  archetypes: readonly Archetype[] = ARCHETYPES,
-): RankedArchetype[] {
+  archetypes: readonly ArchetypeDefinition[] = ARCHETYPE_DEFINITIONS,
+): RankedArchetypeResult[] {
   return archetypes
-    .map((archetype) => cloneRanked(archetype, normalizedDistance(scores, archetype.pattern)))
+    .map((archetype) => Object.freeze({
+      code: archetype.code,
+      distance: normalizedDistance(scores, archetype.pattern),
+    }))
     .sort((left, right) => left.distance - right.distance || left.code.localeCompare(right.code));
 }

@@ -1,5 +1,12 @@
+import { getArchetypeDefinition, getLegacyArchetypeCopy } from '../../data/archetypes';
 import { CORE_DIMENSIONS, DIMENSION_COPY, STATE_DIMENSIONS, WEATHER_COPY } from '../../data/copy';
-import type { CoreDimension, FacetResult, Level } from '../../types';
+import type {
+  Archetype,
+  ArchetypeDefinition,
+  CoreDimension,
+  FacetResult,
+  Level,
+} from '../../types';
 import { escapeHtml } from '../html';
 
 const LEVEL_VALUE: Readonly<Record<Level, number>> = { L: 25, M: 50, H: 75 };
@@ -11,23 +18,27 @@ const CLARITY_COPY = {
   free: '自由切面',
 } as const;
 
-function renderResultTitle(result: FacetResult): string {
+function renderResultTitle(
+  result: FacetResult,
+  primaryCopy: Archetype,
+  adjacentCopy: Archetype,
+): string {
   if (result.clarity === 'free') {
     return `
       <h1 id="screen-title" tabindex="-1">自由切面</h1>
-      <p class="facet-references">最近的两个参考：<strong>${escapeHtml(result.primary.code)} · ${escapeHtml(result.primary.name)}</strong> 与 <strong>${escapeHtml(result.adjacent.code)} · ${escapeHtml(result.adjacent.name)}</strong></p>
+      <p class="facet-references">最近的两个参考：<strong>${escapeHtml(result.primary.code)} · ${escapeHtml(primaryCopy.name)}</strong> 与 <strong>${escapeHtml(result.adjacent.code)} · ${escapeHtml(adjacentCopy.name)}</strong></p>
     `;
   }
   if (result.clarity === 'dual') {
     return `
       <h1 id="screen-title" class="dual-facet-title" tabindex="-1">
-        <span>${escapeHtml(result.primary.code)} · ${escapeHtml(result.primary.name)}</span>
+        <span>${escapeHtml(result.primary.code)} · ${escapeHtml(primaryCopy.name)}</span>
         <span aria-hidden="true">×</span>
-        <span>${escapeHtml(result.adjacent.code)} · ${escapeHtml(result.adjacent.name)}</span>
+        <span>${escapeHtml(result.adjacent.code)} · ${escapeHtml(adjacentCopy.name)}</span>
       </h1>
     `;
   }
-  return `<h1 id="screen-title" tabindex="-1"><span class="facet-code">${escapeHtml(result.primary.code)}</span><span class="facet-name">${escapeHtml(result.primary.name)}</span></h1>`;
+  return `<h1 id="screen-title" tabindex="-1"><span class="facet-code">${escapeHtml(result.primary.code)}</span><span class="facet-name">${escapeHtml(primaryCopy.name)}</span></h1>`;
 }
 
 function operatingExplanation(result: FacetResult): string {
@@ -38,13 +49,20 @@ function operatingExplanation(result: FacetResult): string {
   return `你${launch}；处理变化时倾向${control}。${social}，而且${expression}。这些是更常见的路线，不是每个场景都必须照此运行。`;
 }
 
-function strongestContributors(result: FacetResult): CoreDimension[] {
+function strongestContributors(
+  result: FacetResult,
+  primaryDefinition: ArchetypeDefinition,
+): CoreDimension[] {
   return [...CORE_DIMENSIONS]
     .sort((left, right) => {
       const leftAxis = CORE_DIMENSIONS.indexOf(left);
       const rightAxis = CORE_DIMENSIONS.indexOf(right);
-      const leftContribution = Math.abs(result.coreScores[left] - LEVEL_VALUE[result.primary.pattern[leftAxis]!]);
-      const rightContribution = Math.abs(result.coreScores[right] - LEVEL_VALUE[result.primary.pattern[rightAxis]!]);
+      const leftContribution = Math.abs(
+        result.coreScores[left] - LEVEL_VALUE[primaryDefinition.pattern[leftAxis]!],
+      );
+      const rightContribution = Math.abs(
+        result.coreScores[right] - LEVEL_VALUE[primaryDefinition.pattern[rightAxis]!],
+      );
       return leftContribution - rightContribution || Math.abs(result.coreScores[right] - 50) - Math.abs(result.coreScores[left] - 50);
     })
     .slice(0, 3);
@@ -67,8 +85,13 @@ function renderMeter(code: CoreDimension | 'W1' | 'W2', value: number): string {
   `;
 }
 
-function adjacentDifference(result: FacetResult): string {
-  const differences = CORE_DIMENSIONS.filter((_, index) => result.primary.pattern[index] !== result.adjacent.pattern[index]);
+function adjacentDifference(
+  primaryDefinition: ArchetypeDefinition,
+  adjacentDefinition: ArchetypeDefinition,
+): string {
+  const differences = CORE_DIMENSIONS.filter(
+    (_, index) => primaryDefinition.pattern[index] !== adjacentDefinition.pattern[index],
+  );
   const named = differences.slice(0, 3).map((code) => DIMENSION_COPY[code].name);
   if (named.length === 0) {
     return '两个原型的距离非常接近，差异主要来自多个维度的小幅组合。';
@@ -78,7 +101,11 @@ function adjacentDifference(result: FacetResult): string {
 
 export function renderResult(result: FacetResult, shareMessage = ''): string {
   const weather = WEATHER_COPY[result.weather.code];
-  const contributors = strongestContributors(result);
+  const primaryDefinition = getArchetypeDefinition(result.primary.code);
+  const adjacentDefinition = getArchetypeDefinition(result.adjacent.code);
+  const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
+  const adjacentCopy = getLegacyArchetypeCopy(result.adjacent.code);
+  const contributors = strongestContributors(result, primaryDefinition);
 
   return `
     <article class="screen screen--result" data-screen="result" data-clarity="${result.clarity}">
@@ -87,13 +114,13 @@ export function renderResult(result: FacetResult, shareMessage = ''): string {
           <span>FACET / RESULT</span>
           <span>${escapeHtml(CLARITY_COPY[result.clarity])}</span>
         </div>
-        ${renderResultTitle(result)}
+        ${renderResultTitle(result, primaryCopy, adjacentCopy)}
         <p class="result-weather-chip">${result.weather.code} · ${escapeHtml(weather.name)}${result.weather.isBoundary ? ' · 天气正在交界' : ''}</p>
       </header>
 
       <section class="result-hook" aria-labelledby="hook-title">
         <p class="section-number">01 / FIRST SIGNAL</p>
-        <h2 id="hook-title">${escapeHtml(result.primary.hook)}</h2>
+        <h2 id="hook-title">${escapeHtml(primaryCopy.hook)}</h2>
       </section>
 
       <section aria-labelledby="operation-title">
@@ -125,9 +152,9 @@ export function renderResult(result: FacetResult, shareMessage = ''): string {
 
       <section aria-labelledby="adjacent-title">
         <p class="section-number">05 / ADJACENT FACET</p>
-        <h2 id="adjacent-title">相邻切面：${escapeHtml(result.adjacent.code)} · ${escapeHtml(result.adjacent.name)}</h2>
-        <p>${escapeHtml(result.adjacent.hook)}</p>
-        <p>${escapeHtml(adjacentDifference(result))}</p>
+        <h2 id="adjacent-title">相邻切面：${escapeHtml(result.adjacent.code)} · ${escapeHtml(adjacentCopy.name)}</h2>
+        <p>${escapeHtml(adjacentCopy.hook)}</p>
+        <p>${escapeHtml(adjacentDifference(primaryDefinition, adjacentDefinition))}</p>
       </section>
 
       <section class="weather-report" aria-labelledby="weather-title">
@@ -142,25 +169,25 @@ export function renderResult(result: FacetResult, shareMessage = ''): string {
         <div>
           <p class="section-number">07 / STRENGTHS</p>
           <h2>你常带来的优势</h2>
-          <ul>${result.primary.strengths.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+          <ul>${primaryCopy.strengths.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
         </div>
         <div>
           <p class="section-number">08 / WATCH OUT</p>
           <h2>容易翻车的地方</h2>
-          <ul>${result.primary.pitfalls.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+          <ul>${primaryCopy.pitfalls.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
         </div>
       </section>
 
       <section aria-labelledby="relationship-title">
         <p class="section-number">09 / WITH OTHERS</p>
         <h2 id="relationship-title">关系中的使用说明</h2>
-        <p>${escapeHtml(result.primary.relationshipNeed)}</p>
+        <p>${escapeHtml(primaryCopy.relationshipNeed)}</p>
       </section>
 
       <section class="weekly-action" aria-labelledby="action-title">
         <p class="section-number">10 / THIS WEEK</p>
         <h2 id="action-title">本周可以试一次</h2>
-        <p>${escapeHtml(result.primary.action)}</p>
+        <p>${escapeHtml(primaryCopy.action)}</p>
       </section>
 
       <section class="result-actions" aria-label="结果操作">

@@ -57,10 +57,12 @@ describe('facet result assembly', () => {
     expect(result.createdAt).toBe('2026-08-24T00:00:00.000Z');
     expect(result.coreScores).toEqual({ F1: 50, F2: 50, F3: 50, F4: 50, F5: 50, F6: 50 });
     expect(result.stateScores).toEqual({ W1: 50, W2: 50 });
+    expect(result.primary).toEqual({ code: expect.any(String), distance: expect.any(Number) });
+    expect(result.adjacent).toEqual({ code: expect.any(String), distance: expect.any(Number) });
     expect(result.primary.code).not.toBe(result.adjacent.code);
     expect(result.weather).toEqual({ code: 'TURBO', isBoundary: true });
+    expect(result.standout).not.toHaveProperty('label');
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result.coreScores)).toBe(true);
   });
 });
-

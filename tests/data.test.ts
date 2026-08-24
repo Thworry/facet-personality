@@ -1,11 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { ARCHETYPES } from '../src/data/archetypes';
-import { QUESTIONS } from '../src/data/questions';
+import { ARCHETYPES, ARCHETYPE_DEFINITIONS } from '../src/data/archetypes';
+import { QUESTION_DEFINITIONS, QUESTIONS } from '../src/data/questions';
 import type { Level } from '../src/types';
 
 const levelDistance: Record<Level, number> = { L: 0, M: 1, H: 2 };
 
 describe('product data', () => {
+  it('projects stable question metadata without localized prompts', () => {
+    expect(QUESTION_DEFINITIONS).toHaveLength(32);
+    expect(QUESTION_DEFINITIONS.every((question) => !('prompt' in question))).toBe(true);
+  });
+
+  it('projects stable archetype metadata without localized copy', () => {
+    expect(ARCHETYPE_DEFINITIONS).toHaveLength(12);
+    expect(
+      ARCHETYPE_DEFINITIONS.every(
+        (archetype) => !('name' in archetype) && !('hook' in archetype),
+      ),
+    ).toBe(true);
+  });
+
   it('contains exactly 32 unique questions', () => {
     expect(QUESTIONS).toHaveLength(32);
     expect(new Set(QUESTIONS.map((question) => question.id)).size).toBe(32);

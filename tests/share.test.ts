@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { QUESTIONS } from '../src/data/questions';
+import { BALANCED_STANDOUT, DIMENSION_COPY } from '../src/data/copy';
+import { getLegacyArchetypeCopy } from '../src/data/archetypes';
 import { buildFacetResult } from '../src/domain/result';
 import { drawShareCard, type ShareCanvasContext } from '../src/domain/share';
 import type { Answers } from '../src/types';
@@ -42,6 +44,24 @@ const neutralAnswers = Object.fromEntries(QUESTIONS.map((question) => [question.
 describe('local share-card renderer', () => {
   it('draws the required identity, weather, standout, adjacent, and boundary copy', () => {
     const result = buildFacetResult(neutralAnswers, 'share-result', '2026-08-24T00:00:00.000Z');
+    const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
+    const adjacentCopy = getLegacyArchetypeCopy(result.adjacent.code);
+    const standout = (() => {
+      const dimension = result.standout.dimension;
+      if (result.standout.direction === 'balanced') {
+        return BALANCED_STANDOUT.label;
+      }
+      if (result.standout.direction === 'low') {
+        if (dimension === 'BALANCED') {
+          throw new Error('Balanced result should not have low direction');
+        }
+        return DIMENSION_COPY[dimension].lowLabel;
+      }
+      if (dimension === 'BALANCED') {
+        throw new Error('Balanced result should not have high direction');
+      }
+      return DIMENSION_COPY[dimension].highLabel;
+    })();
     const context = new RecordingContext();
 
     drawShareCard(context, result, 1);
@@ -49,21 +69,22 @@ describe('local share-card renderer', () => {
     const text = context.text.join(' ');
     expect(text).toContain('FACET');
     expect(text).toContain(result.primary.code);
-    expect(text).toContain(result.primary.name);
+    expect(text).toContain(primaryCopy.name);
     expect(text).toContain(result.weather.code);
-    expect(text).toContain(result.standout.label);
-    expect(text).toContain(result.adjacent.name);
+    expect(text).toContain(standout);
+    expect(text).toContain(adjacentCopy.name);
     expect(text).toContain('娱乐向自我观察');
     expect(text).not.toContain(String(result.coreScores.F1));
   });
 
   it('applies the requested drawing scale without changing card copy', () => {
     const result = buildFacetResult(neutralAnswers, 'scaled-result', '2026-08-24T00:00:00.000Z');
+    const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
     const context = new RecordingContext();
 
     drawShareCard(context, result, 2);
 
     expect(context.scales).toContainEqual([2, 2]);
-    expect(context.text.join(' ')).toContain(result.primary.name);
+    expect(context.text.join(' ')).toContain(primaryCopy.name);
   });
 });

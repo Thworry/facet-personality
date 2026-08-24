@@ -1,4 +1,4 @@
-import type { Archetype } from '../types';
+import type { Archetype, ArchetypeDefinition } from '../types';
 
 export const ARCHETYPES = [
   {
@@ -123,3 +123,32 @@ export const ARCHETYPES = [
   },
 ] as const satisfies readonly Archetype[];
 
+function freezePattern(
+  pattern: ArchetypeDefinition['pattern'],
+): ArchetypeDefinition['pattern'] {
+  return Object.freeze([...pattern]) as unknown as ArchetypeDefinition['pattern'];
+}
+
+export const ARCHETYPE_DEFINITIONS: readonly ArchetypeDefinition[] = Object.freeze(
+  ARCHETYPES.map(({ code, pattern }) => Object.freeze({
+    code,
+    pattern: freezePattern(pattern),
+  })),
+);
+
+export function getArchetypeDefinition(code: string): ArchetypeDefinition {
+  const definition = ARCHETYPE_DEFINITIONS.find((archetype) => archetype.code === code);
+  if (definition === undefined) {
+    throw new Error(`Unknown archetype code: ${code}`);
+  }
+  return definition;
+}
+
+/** Temporary Chinese compatibility lookup; remove after locale catalogs reach all renderers. */
+export function getLegacyArchetypeCopy(code: string): Archetype {
+  const archetype = ARCHETYPES.find((candidate) => candidate.code === code);
+  if (archetype === undefined) {
+    throw new Error(`Unknown archetype code: ${code}`);
+  }
+  return archetype;
+}

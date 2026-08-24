@@ -1,4 +1,4 @@
-import type { Question } from '../types';
+import type { Question, QuestionDefinition } from '../types';
 
 export const QUESTIONS = [
   {
@@ -227,3 +227,11 @@ export const QUESTIONS = [
   },
 ] as const satisfies readonly Question[];
 
+export const QUESTION_DEFINITIONS: readonly QuestionDefinition[] = Object.freeze(
+  QUESTIONS.map(({ id, dimension, direction, timeframe }) => Object.freeze({
+    id,
+    dimension,
+    direction,
+    timeframe,
+  })),
+);

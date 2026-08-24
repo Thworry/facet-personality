@@ -15,6 +15,7 @@ import { renderAtlas } from '../src/app/screens/atlas';
 import { renderHistory } from '../src/app/screens/history';
 import { renderResult } from '../src/app/screens/result';
 import { buildFacetResult } from '../src/domain/result';
+import { getLegacyArchetypeCopy } from '../src/data/archetypes';
 
 const canonicalOrder = QUESTIONS.map((question) => question.id);
 
@@ -195,9 +196,11 @@ describe('result and archive markup', () => {
 
   it('renders the complete layered result with eight accessible meters', () => {
     const html = renderResult(result);
+    const primaryCopy = getLegacyArchetypeCopy(result.primary.code);
+    const adjacentCopy = getLegacyArchetypeCopy(result.adjacent.code);
 
-    expect(html).toContain(result.primary.name);
-    expect(html).toContain(result.adjacent.name);
+    expect(html).toContain(primaryCopy.name);
+    expect(html).toContain(adjacentCopy.name);
     expect(html).toContain('为什么是它');
     expect(html).toContain('当前天气');
     expect(html).toContain('关系中的使用说明');

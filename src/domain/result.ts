@@ -1,4 +1,4 @@
-import { BALANCED_STANDOUT, CORE_DIMENSIONS, DIMENSION_COPY } from '../data/copy';
+import { CORE_DIMENSIONS } from '../data/copy';
 import { rankArchetypes, scoreDimensions } from './scoring';
 import type {
   Answers,
@@ -53,17 +53,18 @@ export function selectStandout(scores: CoreScores): StandoutResult {
     return Object.freeze({
       dimension: farthest,
       direction: 'low',
-      label: DIMENSION_COPY[farthest].lowLabel,
     });
   }
   if (score >= 72) {
     return Object.freeze({
       dimension: farthest,
       direction: 'high',
-      label: DIMENSION_COPY[farthest].highLabel,
     });
   }
-  return Object.freeze({ ...BALANCED_STANDOUT });
+  return Object.freeze({
+    dimension: 'BALANCED',
+    direction: 'balanced',
+  });
 }
 
 export function buildFacetResult(
@@ -87,13 +88,22 @@ export function buildFacetResult(
     throw new Error('At least two archetypes are required to build a FACET result');
   }
 
+  const primaryResult = Object.freeze({
+    code: primary.code,
+    distance: primary.distance,
+  });
+  const adjacentResult = Object.freeze({
+    code: adjacent.code,
+    distance: adjacent.distance,
+  });
+
   return Object.freeze({
     id,
     createdAt,
     coreScores,
     stateScores,
-    primary,
-    adjacent,
+    primary: primaryResult,
+    adjacent: adjacentResult,
     clarity: classifyClarity(primary.distance, adjacent.distance),
     weather: classifyWeather(stateScores),
     standout: selectStandout(coreScores),
