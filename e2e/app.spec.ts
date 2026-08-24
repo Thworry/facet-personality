@@ -10,7 +10,9 @@ const ANSWER_LABELS = [
 ] as const;
 
 const PROGRESS_KEY = 'facet:v1:progress';
-const HISTORY_KEY = 'facet:v1:history';
+const LEGACY_HISTORY_KEY = 'facet:v1:history';
+const HISTORY_KEY = 'facet:v2:history';
+const LOCALE_KEY = 'facet:v1:locale';
 
 async function expectQuestion(page: Page, position: number): Promise<void> {
   await expect(page.locator('[data-screen="quiz"] .progress-copy')).toHaveText(`第 ${position} 题，共 32 题`);
@@ -164,13 +166,23 @@ test('restores the sixth question after five answers and retains prior selection
 });
 
 test('clears FACET progress and history without removing unrelated local data', async ({ page }) => {
-  await page.addInitScript(({ progressKey, historyKey }) => {
+  await page.addInitScript(({ progressKey, legacyHistoryKey, historyKey, localeKey }) => {
+    Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN'] });
+    Object.defineProperty(navigator, 'language', { get: () => 'zh-CN' });
     window.localStorage.setItem(progressKey, '{"unreadable":true}');
-    window.localStorage.setItem(historyKey, '{"unreadable":true}');
+    window.localStorage.setItem(legacyHistoryKey, '{"unreadable":true}');
+    window.localStorage.setItem(historyKey, '{"version":2,"results":[]}');
+    window.localStorage.setItem(localeKey, 'en');
     window.localStorage.setItem('facet:e2e:unrelated', 'keep');
-  }, { progressKey: PROGRESS_KEY, historyKey: HISTORY_KEY });
+  }, {
+    progressKey: PROGRESS_KEY,
+    legacyHistoryKey: LEGACY_HISTORY_KEY,
+    historyKey: HISTORY_KEY,
+    localeKey: LOCALE_KEY,
+  });
 
   await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByText('检测到无法读取的本地进度', { exact: false })).toBeVisible();
   await page.locator('[data-action="show-history"]').click();
   await page.locator('[data-action="request-clear"]').click();
@@ -178,14 +190,59 @@ test('clears FACET progress and history without removing unrelated local data', 
   await page.locator('[data-action="confirm-clear"]').click();
   await expect(page.locator('[data-history-status]')).toContainText('已清除');
 
-  const localData = await page.evaluate(({ progressKey, historyKey }) => ({
+  const localData = await page.evaluate(({ progressKey, legacyHistoryKey, historyKey, localeKey }) => ({
     progress: window.localStorage.getItem(progressKey),
+    legacyHistory: window.localStorage.getItem(legacyHistoryKey),
     history: window.localStorage.getItem(historyKey),
+    locale: window.localStorage.getItem(localeKey),
     unrelated: window.localStorage.getItem('facet:e2e:unrelated'),
-  }), { progressKey: PROGRESS_KEY, historyKey: HISTORY_KEY });
+  }), {
+    progressKey: PROGRESS_KEY,
+    legacyHistoryKey: LEGACY_HISTORY_KEY,
+    historyKey: HISTORY_KEY,
+    localeKey: LOCALE_KEY,
+  });
 
-  expect(localData).toEqual({ progress: null, history: null, unrelated: 'keep' });
+  expect(localData).toEqual({
+    progress: null,
+    legacyHistory: null,
+    history: null,
+    locale: null,
+    unrelated: 'keep',
+  });
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(page).toHaveTitle('FACET｜人格切面');
   await expect(page.getByRole('heading', { name: '档案里还没有结果' })).toBeVisible();
+
+  await page.locator('[data-action="back"]').click();
+  await expect(page.locator('[data-screen="landing"]')).toBeVisible();
+  await expect(page.getByText('检测到无法读取的本地进度', { exact: false })).toHaveCount(0);
+});
+
+test('clears FACET only on success and retains the unreadable-progress warning on failure', async ({ page }) => {
+  await page.addInitScript((progressKey) => {
+    window.localStorage.setItem(progressKey, '{"unreadable":true}');
+    const removeItem = Storage.prototype.removeItem;
+    Storage.prototype.removeItem = function blockedProgressRemoval(key: string): void {
+      if (key === progressKey) {
+        throw new DOMException('Blocked', 'SecurityError');
+      }
+      removeItem.call(this, key);
+    };
+  }, PROGRESS_KEY);
+
+  await page.goto('/');
+  await expect(page.getByText('检测到无法读取的本地进度', { exact: false })).toBeVisible();
+  await page.locator('[data-action="show-history"]').click();
+  await page.locator('[data-action="request-clear"]').click();
+  await page.locator('[data-action="confirm-clear"]').click();
+  await expect(page.locator('[data-history-status]')).toContainText('浏览器没有允许删除本地数据');
+
+  await page.locator('[data-action="back"]').click();
+  await expect(page.locator('[data-screen="landing"]')).toBeVisible();
+  await expect(page.getByText('检测到无法读取的本地进度', { exact: false })).toBeVisible();
+  await expect.poll(() => page.evaluate((key) => window.localStorage.getItem(key), PROGRESS_KEY))
+    .not.toBeNull();
 });
 
 test('applies the motion preference declared by each browser project', async ({ page }, testInfo) => {

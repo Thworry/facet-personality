@@ -88,7 +88,7 @@ export function createAppController(
   const storage = options.storage ?? window.localStorage;
   const answerDelayMs = options.answerDelayMs ?? 220;
   const savedProgress = loadProgress(storage);
-  const hadUnreadableProgress = savedProgress === null && storageContainsProgress(storage);
+  let hadUnreadableProgress = savedProgress === null && storageContainsProgress(storage);
   const initialLocale = detectLocale(storage, getBrowserLanguages());
   let state = savedProgress === null
     ? createInitialState(undefined, initialLocale)
@@ -259,17 +259,20 @@ export function createAppController(
     if (!success) {
       const status = root.querySelector<HTMLElement>('[data-history-status]');
       if (status !== null) {
-        status.textContent = '浏览器没有允许删除本地数据，请检查站点存储设置后重试。';
+        status.textContent = getCatalog(state.locale).feedback.storageDeleteFailure;
       }
       return;
     }
+    hadUnreadableProgress = false;
     shareMessage = '';
     const reset = reduceAppState(state, { type: 'RESET' });
-    state = reduceAppState(reset, { type: 'SHOW_HISTORY' });
+    const detectedLocale = detectLocale(storage, getBrowserLanguages());
+    const localizedReset = reduceAppState(reset, { type: 'SET_LOCALE', locale: detectedLocale });
+    state = reduceAppState(localizedReset, { type: 'SHOW_HISTORY' });
     render(true);
     const status = root.querySelector<HTMLElement>('[data-history-status]');
     if (status !== null) {
-      status.textContent = 'FACET 的未完成进度和历史结果已清除。';
+      status.textContent = getCatalog(state.locale).feedback.dataCleared;
     }
   }
 
