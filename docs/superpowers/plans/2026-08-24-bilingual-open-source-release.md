@@ -73,6 +73,8 @@
 - Modify: `tests/data.test.ts`
 - Modify: `tests/result.test.ts`
 - Modify: `tests/storage.test.ts`
+- Modify: `tests/state.test.ts`
+- Modify: `tests/share.test.ts`
 
 **Interfaces:**
 - Consumes: existing `DimensionCode`, `Direction`, `Level`, scoring thresholds, and current 32 question/12 archetype metadata.
@@ -99,7 +101,7 @@ expect(result.standout).not.toHaveProperty('label');
 Run:
 
 ```bash
-pnpm test -- tests/data.test.ts tests/result.test.ts
+pnpm exec vitest run tests/data.test.ts tests/result.test.ts
 ```
 
 Expected: FAIL because the metadata-only exports and neutral result reference types do not exist, and current result references still include complete localized archetype objects and a standout label.
@@ -143,7 +145,7 @@ For this task, retain the existing rich `QUESTIONS` and `ARCHETYPES` exports so 
 Run:
 
 ```bash
-pnpm test -- tests/data.test.ts tests/scoring.test.ts tests/result.test.ts tests/storage.test.ts
+pnpm exec vitest run tests/data.test.ts tests/scoring.test.ts tests/result.test.ts tests/storage.test.ts tests/state.test.ts tests/share.test.ts
 pnpm build
 ```
 
@@ -152,7 +154,7 @@ Expected: focused domain tests and build PASS. Result/history/share renderers ob
 - [ ] **Step 5: Commit the neutral domain model**
 
 ```bash
-git add src/types.ts src/data/questions.ts src/data/archetypes.ts src/domain/scoring.ts src/domain/result.ts src/domain/storage.ts src/app/screens/result.ts src/app/screens/history.ts src/domain/share.ts tests/data.test.ts tests/result.test.ts tests/storage.test.ts
+git add src/types.ts src/data/questions.ts src/data/archetypes.ts src/domain/scoring.ts src/domain/result.ts src/domain/storage.ts src/app/screens/result.ts src/app/screens/history.ts src/domain/share.ts tests/data.test.ts tests/result.test.ts tests/storage.test.ts tests/state.test.ts tests/share.test.ts
 git commit -m "refactor: separate FACET scoring data from copy"
 ```
 
@@ -193,7 +195,7 @@ Also snapshot a metadata table derived from `QUESTIONS` and prove that selecting
 Run:
 
 ```bash
-pnpm test -- tests/i18n.test.ts
+pnpm exec vitest run tests/i18n.test.ts
 ```
 
 Expected: FAIL with unresolved `src/i18n/catalog` and `src/i18n/types` imports.
@@ -311,7 +313,7 @@ export function getCatalog(locale: Locale): LocaleCatalog {
 Run:
 
 ```bash
-pnpm test -- tests/i18n.test.ts tests/data.test.ts
+pnpm exec vitest run tests/i18n.test.ts tests/data.test.ts
 pnpm build
 ```
 
@@ -361,7 +363,7 @@ Assert the switcher contains two buttons, `data-action="set-locale"`, matching `
 - [ ] **Step 2: Run focused tests and confirm failure**
 
 ```bash
-pnpm test -- tests/i18n.test.ts tests/state.test.ts
+pnpm exec vitest run tests/i18n.test.ts tests/state.test.ts
 ```
 
 Expected: FAIL because locale helpers, state, and switcher do not exist.
@@ -417,7 +419,7 @@ Keep the static `index.html` metadata and skip-link text useful for no-script fa
 - [ ] **Step 7: Run tests and commit**
 
 ```bash
-pnpm test -- tests/i18n.test.ts tests/state.test.ts
+pnpm exec vitest run tests/i18n.test.ts tests/state.test.ts
 pnpm build
 git add src/i18n/locale.ts src/app/screens/locale-switcher.ts src/app/state.ts src/app/controller.ts src/main.ts src/styles/components.css tests/i18n.test.ts tests/state.test.ts index.html
 git commit -m "feat: add persistent locale switching"
@@ -458,7 +460,7 @@ For deletion, seed progress, v1 history, v2 history, locale, and `another-app`; 
 - [ ] **Step 2: Run storage tests and confirm the v1-only implementation fails**
 
 ```bash
-pnpm test -- tests/storage.test.ts
+pnpm exec vitest run tests/storage.test.ts
 ```
 
 Expected: FAIL on missing v2 key/envelope, rich-copy normalization, and locale deletion.
@@ -492,8 +494,8 @@ After confirmed deletion, the controller redetects locale using browser language
 - [ ] **Step 5: Run storage and deletion journey tests**
 
 ```bash
-pnpm test -- tests/storage.test.ts tests/state.test.ts
-pnpm test:e2e -- --grep "clears FACET"
+pnpm exec vitest run tests/storage.test.ts tests/state.test.ts
+pnpm exec playwright test --grep "clears FACET"
 ```
 
 Expected: PASS; unrelated storage remains untouched and no duplicate history appears after migration.
@@ -550,7 +552,7 @@ For every renderer, call once with `CATALOGS['zh-CN']` and once with `CATALOGS.e
 - [ ] **Step 2: Run screen tests and confirm hard-coded renderers fail**
 
 ```bash
-pnpm test -- tests/state.test.ts
+pnpm exec vitest run tests/state.test.ts
 ```
 
 Expected: FAIL because renderers accept no catalog and read Chinese-rich domain fields.
@@ -646,7 +648,7 @@ Add an English wrapping case with `Your operating notes — warranty not include
 - [ ] **Step 2: Run share tests and confirm the Chinese-only signature fails**
 
 ```bash
-pnpm test -- tests/share.test.ts
+pnpm exec vitest run tests/share.test.ts
 ```
 
 Expected: FAIL because `drawShareCard` accepts no catalog and uses character wrapping for every locale.
@@ -673,7 +675,7 @@ Pass the current catalog into `drawShareCard`. Read success, unsupported Canvas,
 - [ ] **Step 5: Run focused and full unit suites**
 
 ```bash
-pnpm test -- tests/share.test.ts tests/state.test.ts
+pnpm exec vitest run tests/share.test.ts tests/state.test.ts
 pnpm test
 pnpm build
 ```
@@ -816,7 +818,7 @@ Also assert both preview PNGs start with the PNG signature and have a non-trivia
 - [ ] **Step 2: Run the release test and confirm missing files fail**
 
 ```bash
-pnpm test -- tests/release.test.ts
+pnpm exec vitest run tests/release.test.ts
 ```
 
 Expected: FAIL because bilingual docs, license, workflow, and previews do not yet exist.
@@ -928,7 +930,7 @@ jobs:
 - [ ] **Step 8: Run release, unit, E2E, and build gates**
 
 ```bash
-pnpm test -- tests/release.test.ts
+pnpm exec vitest run tests/release.test.ts
 pnpm test
 pnpm test:e2e
 pnpm build
