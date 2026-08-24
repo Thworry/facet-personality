@@ -102,6 +102,7 @@ export function createAppController(
       root.querySelector('.landing-hero')?.append(notice);
     }
     if (moveFocus) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       focusScreenHeading();
     }
   }

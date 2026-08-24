@@ -26,7 +26,7 @@ function renderChapterInterstitial(state: AppState): string {
       </header>
       <section class="chapter-curtain" aria-labelledby="screen-title">
         <p class="eyebrow">线路换乘</p>
-        <h1 id="screen-title" tabindex="-1">接下来只看最近两周。</h1>
+        <h1 id="screen-title" tabindex="-1" aria-label="接下来只看最近两周。"><span>接下来</span><span>只看最近</span><span>两周。</span></h1>
         <p>前面读的是你通常怎么运行；最后 8 题只观察最近的负荷与恢复。天气会变，它不是人格判决。</p>
         <button class="button button--primary" type="button" data-action="next">继续最近两周</button>
         <button class="text-action" type="button" data-action="back">返回上一题</button>

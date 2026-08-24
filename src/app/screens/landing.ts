@@ -1,4 +1,9 @@
 export function renderLanding(): string {
+  const stations = Array.from({ length: 32 }, (_, index) => {
+    const interval = index % 4 === 0 ? ' landing-station--interval' : '';
+    return `<span class="landing-station${interval}"><span>${index + 1}</span></span>`;
+  }).join('');
+
   return `
     <div class="screen screen--landing" data-screen="landing">
       <header class="site-header">
@@ -10,7 +15,7 @@ export function renderLanding(): string {
 
       <section class="landing-hero" aria-labelledby="screen-title">
         <p class="eyebrow">32 个生活场景 · 8 条可解释线路</p>
-        <h1 id="screen-title" tabindex="-1">你不是一个类型。<br>你只是习惯用某种方式运行。</h1>
+        <h1 id="screen-title" tabindex="-1"><span>你不是一个类型。</span><span>你只是习惯用</span><span>某种方式运行。</span></h1>
         <p class="landing-deck">32 个生活场景，拆出 6 条稳定轨道和 2 个近期信号。没有“最好的人格”，也不拿一个百分比冒充心理学准确率。</p>
         <div class="landing-actions">
           <button class="button button--primary" type="button" data-action="start">开始读取我的切面</button>
@@ -18,7 +23,7 @@ export function renderLanding(): string {
         </div>
       </section>
 
-      <div class="landing-line" aria-hidden="true" data-stations="32"></div>
+      <div class="landing-line" aria-hidden="true" data-stations="32">${stations}</div>
 
       <section class="facts" aria-label="测试信息">
         <div><strong>32题</strong><span>生活场景，不考标准答案</span></div>
