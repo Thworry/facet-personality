@@ -3,7 +3,37 @@ import { ARCHETYPES } from '../src/data/archetypes';
 import { DIMENSION_COPY, WEATHER_COPY } from '../src/data/copy';
 import { QUESTIONS } from '../src/data/questions';
 import { CATALOGS, getCatalog } from '../src/i18n/catalog';
+import { detectLocale, LOCALE_KEY, saveLocale } from '../src/i18n/locale';
 import type { Locale, LocaleCatalog } from '../src/i18n/types';
+import { renderLocaleSwitcher } from '../src/app/screens/locale-switcher';
+
+class MemoryStorage implements Storage {
+  private readonly values = new Map<string, string>();
+
+  get length(): number {
+    return this.values.size;
+  }
+
+  clear(): void {
+    this.values.clear();
+  }
+
+  getItem(key: string): string | null {
+    return this.values.get(key) ?? null;
+  }
+
+  key(index: number): string | null {
+    return [...this.values.keys()][index] ?? null;
+  }
+
+  removeItem(key: string): void {
+    this.values.delete(key);
+  }
+
+  setItem(key: string, value: string): void {
+    this.values.set(key, value);
+  }
+}
 
 const ENGLISH_QUESTIONS = [
   "Even without anyone's approval, I can tell whether something matters to me.",
@@ -70,6 +100,58 @@ function metadataFor(locale: Locale) {
     })
     .sort((left, right) => left.id - right.id);
 }
+
+describe('locale selection and switcher', () => {
+  it('prioritizes an exact stored locale over the browser language list', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(LOCALE_KEY, 'zh-CN');
+
+    expect(detectLocale(storage, ['en-US'])).toBe('zh-CN');
+  });
+
+  it('scans browser languages in order and otherwise falls back to English', () => {
+    const storage = new MemoryStorage();
+
+    expect(detectLocale(storage, ['fr-FR', 'zh-Hans-CN', 'en'])).toBe('zh-CN');
+    expect(detectLocale(storage, ['fr-FR', 'en-GB', 'zh-Hant'])).toBe('en');
+    expect(detectLocale(storage, ['fr-FR'])).toBe('en');
+  });
+
+  it('ignores invalid stored values and contains unavailable-storage errors', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(LOCALE_KEY, 'xx');
+    expect(detectLocale(storage, ['en-US'])).toBe('en');
+
+    storage.getItem = () => {
+      throw new DOMException('Storage blocked', 'SecurityError');
+    };
+    expect(detectLocale(storage, ['zh-TW'])).toBe('zh-CN');
+  });
+
+  it('persists valid locales without leaking quota or security errors', () => {
+    const writableStorage = new MemoryStorage();
+    expect(saveLocale('en', writableStorage)).toBe(true);
+    expect(writableStorage.getItem(LOCALE_KEY)).toBe('en');
+
+    const throwingStorage = new MemoryStorage();
+    throwingStorage.setItem = () => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    };
+    expect(saveLocale('en', throwingStorage)).toBe(false);
+  });
+
+  it('renders two pressed-state buttons and a polite language announcement', () => {
+    const html = renderLocaleSwitcher('zh-CN', CATALOGS['zh-CN']);
+
+    expect(html.match(/<button/g)).toHaveLength(2);
+    expect(html.match(/data-action="set-locale"/g)).toHaveLength(2);
+    expect(html).toContain('data-locale="zh-CN" aria-pressed="true"');
+    expect(html).toContain('data-locale="en" aria-pressed="false"');
+    expect(html).toContain('>中文<');
+    expect(html).toContain('>English<');
+    expect(html).toContain('aria-live="polite"');
+  });
+});
 
 describe('locale catalogs', () => {
   it('registers two complete catalogs with identical leaf keys', () => {

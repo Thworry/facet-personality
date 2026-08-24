@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QUESTIONS } from '../src/data/questions';
 import type { Answers } from '../src/types';
 import {
@@ -7,6 +7,7 @@ import {
   createQuestionOrder,
   reduceAppState,
   restoreAppState,
+  toSavedProgress,
 } from '../src/app/state';
 import { renderIntro } from '../src/app/screens/intro';
 import { renderLanding } from '../src/app/screens/landing';
@@ -16,8 +17,42 @@ import { renderHistory } from '../src/app/screens/history';
 import { renderResult } from '../src/app/screens/result';
 import { buildFacetResult } from '../src/domain/result';
 import { getLegacyArchetypeCopy } from '../src/data/archetypes';
+import { createAppController } from '../src/app/controller';
+import { LOCALE_KEY } from '../src/i18n/locale';
 
 const canonicalOrder = QUESTIONS.map((question) => question.id);
+
+class MemoryStorage implements Storage {
+  private readonly values = new Map<string, string>();
+
+  get length(): number {
+    return this.values.size;
+  }
+
+  clear(): void {
+    this.values.clear();
+  }
+
+  getItem(key: string): string | null {
+    return this.values.get(key) ?? null;
+  }
+
+  key(index: number): string | null {
+    return [...this.values.keys()][index] ?? null;
+  }
+
+  removeItem(key: string): void {
+    this.values.delete(key);
+  }
+
+  setItem(key: string, value: string): void {
+    this.values.set(key, value);
+  }
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('question order', () => {
   it('shuffles the core and recent-state chapters independently', () => {
@@ -34,6 +69,42 @@ describe('question order', () => {
 });
 
 describe('application state reducer', () => {
+  it('switches locale without changing the current route, question, or answers', () => {
+    const quizState = {
+      ...createInitialState(canonicalOrder, 'zh-CN'),
+      route: 'quiz' as const,
+      returnRoute: 'quiz' as const,
+      index: 7,
+      answers: { 1: 4, 2: 2 } as Answers,
+    };
+
+    const switched = reduceAppState(quizState, { type: 'SET_LOCALE', locale: 'en' });
+
+    expect(switched).toMatchObject({
+      route: 'quiz',
+      index: quizState.index,
+      answers: quizState.answers,
+      locale: 'en',
+    });
+  });
+
+  it('restores locale separately from progress and RESET preserves it', () => {
+    const progress = {
+      version: 1 as const,
+      route: 'quiz' as const,
+      index: 2,
+      order: [...canonicalOrder],
+      answers: { 1: 4, 2: 3 } as Answers,
+    };
+    const restored = restoreAppState(progress, 'en');
+    const savedAgain = toSavedProgress(restored);
+    const reset = reduceAppState(restored, { type: 'RESET' });
+
+    expect(restored.locale).toBe('en');
+    expect(savedAgain).not.toHaveProperty('locale');
+    expect(reset.locale).toBe('en');
+  });
+
   it('moves from landing to intro and begins the quiz with the supplied order', () => {
     const landing = createInitialState(canonicalOrder);
     const intro = reduceAppState(landing, { type: 'START' });
@@ -66,7 +137,7 @@ describe('application state reducer', () => {
       index: 2,
       order: [...canonicalOrder],
       answers: { 1: 3, 2: 4, 3: 5 },
-    });
+    }, 'zh-CN');
 
     expect(reduceAppState(base, { type: 'BACK' }).index).toBe(1);
     expect(reduceAppState({ ...base, index: 0 }, { type: 'BACK' }).route).toBe('intro');
@@ -80,7 +151,7 @@ describe('application state reducer', () => {
       index: 5,
       order,
       answers: { 2: 5, 3: 2 },
-    });
+    }, 'zh-CN');
 
     expect(restored.route).toBe('quiz');
     expect(restored.index).toBe(5);
@@ -96,7 +167,7 @@ describe('application state reducer', () => {
       index: 23,
       order: [...canonicalOrder],
       answers,
-    });
+    }, 'zh-CN');
     const chapter = reduceAppState(beforeBoundary, { type: 'NEXT' });
     const question25 = reduceAppState(chapter, { type: 'NEXT' });
 
@@ -126,6 +197,161 @@ describe('application state reducer', () => {
 
     expect(retest).toMatchObject({ route: 'quiz', index: 24, chapterIntroVisible: false });
     expect(Object.keys(retest.answers).map(Number).sort((a, b) => a - b)).toEqual(canonicalOrder.slice(0, 24));
+  });
+});
+
+describe('controller locale metadata', () => {
+  it('detects locale once and synchronizes document metadata on every render', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(LOCALE_KEY, 'zh-CN');
+    const localeReads = vi.spyOn(storage, 'getItem');
+    const description = { setAttribute: vi.fn() };
+    const skipLink = { textContent: '跳到主要内容' };
+    const documentElement = { lang: '' };
+    const fakeDocument = {
+      documentElement,
+      title: '',
+      querySelector: vi.fn((selector: string) =>
+        selector === 'meta[name="description"]' ? description : selector === '.skip-link' ? skipLink : null,
+      ),
+      createElement: vi.fn(),
+      body: { append: vi.fn() },
+    };
+    const scrollTo = vi.fn();
+    vi.stubGlobal('document', fakeDocument);
+    vi.stubGlobal('navigator', { languages: ['en-US'], language: 'en-US' });
+    vi.stubGlobal('window', { scrollTo, clearTimeout: vi.fn(), setTimeout: vi.fn() });
+
+    const root = {
+      innerHTML: '',
+      querySelector: vi.fn(() => null),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as HTMLElement;
+    const controller = createAppController(root, { storage });
+
+    expect(controller.getState().locale).toBe('zh-CN');
+    expect(documentElement.lang).toBe('zh-CN');
+    expect(fakeDocument.title).toBe('FACET｜人格切面');
+    expect(skipLink.textContent).toBe('跳到主要内容');
+
+    controller.dispatch({ type: 'SET_LOCALE', locale: 'en' });
+
+    expect(controller.getState().locale).toBe('en');
+    expect(documentElement.lang).toBe('en');
+    expect(fakeDocument.title).toBe('FACET | Personality Facets');
+    expect(description.setAttribute).toHaveBeenLastCalledWith(
+      'content',
+      expect.stringContaining('local-first'),
+    );
+    expect(skipLink.textContent).toBe('Skip to main content');
+    expect(localeReads.mock.calls.filter(([key]) => key === LOCALE_KEY)).toHaveLength(1);
+  });
+
+  it('handles a locale-button click without losing quiz context or pending-timer control', () => {
+    class FakeElement {
+      constructor(readonly dataset: DOMStringMap) {}
+
+      closest(): FakeElement {
+        return this;
+      }
+    }
+
+    class FakeInputElement extends FakeElement {
+      readonly name = 'answer';
+
+      constructor(readonly value: string) {
+        super({} as DOMStringMap);
+      }
+    }
+
+    const storage = new MemoryStorage();
+    storage.setItem(LOCALE_KEY, 'zh-CN');
+    const listeners = new Map<string, EventListener>();
+    const headingFocus = vi.fn();
+    const answerFocus = vi.fn();
+    const activeLocaleFocus = vi.fn();
+    const languageStatus = { textContent: '' };
+    const root = {
+      innerHTML: '',
+      querySelector: vi.fn((selector: string) => {
+        if (selector === '#screen-title') return { focus: headingFocus };
+        if (selector === '#answer-4') return { focus: answerFocus };
+        if (selector === '[data-action="set-locale"][data-locale="en"]') {
+          return { focus: activeLocaleFocus };
+        }
+        if (selector === '[data-locale-status]') return languageStatus;
+        return null;
+      }),
+      addEventListener: vi.fn((type: string, listener: EventListener) => {
+        listeners.set(type, listener);
+      }),
+      removeEventListener: vi.fn(),
+    } as unknown as HTMLElement;
+    const skipLink = { textContent: '' };
+    vi.stubGlobal('document', {
+      documentElement: { lang: '' },
+      title: '',
+      querySelector: vi.fn((selector: string) =>
+        selector === 'meta[name="description"]'
+          ? { setAttribute: vi.fn() }
+          : selector === '.skip-link'
+            ? skipLink
+            : null,
+      ),
+    });
+    vi.stubGlobal('navigator', { languages: ['en-US'], language: 'en-US' });
+    vi.stubGlobal('Element', FakeElement);
+    vi.stubGlobal('HTMLInputElement', FakeInputElement);
+
+    let pendingTimer: (() => void) | null = null;
+    let timerCancelled = false;
+    const runPendingTimer = (): void => {
+      if (timerCancelled || pendingTimer === null) {
+        return;
+      }
+      pendingTimer();
+    };
+    const scrollTo = vi.fn();
+    const clearTimeout = vi.fn(() => {
+      timerCancelled = true;
+    });
+    vi.stubGlobal('window', {
+      scrollTo,
+      clearTimeout,
+      setTimeout: vi.fn((callback: () => void) => {
+        pendingTimer = callback;
+        timerCancelled = false;
+        return 17;
+      }),
+    });
+
+    const controller = createAppController(root, { storage, answerDelayMs: 220 });
+    controller.dispatch({ type: 'START' });
+    controller.dispatch({ type: 'BEGIN_QUIZ', order: [...canonicalOrder] });
+    listeners.get('change')?.({ target: new FakeInputElement('4') } as unknown as Event);
+
+    const beforeSwitch = controller.getState();
+    const scrollCalls = scrollTo.mock.calls.length;
+    const headingFocusCalls = headingFocus.mock.calls.length;
+    listeners.get('click')?.({
+      target: new FakeElement({ action: 'set-locale', locale: 'en' } as DOMStringMap),
+    } as unknown as Event);
+
+    runPendingTimer();
+
+    expect(controller.getState()).toMatchObject({
+      route: beforeSwitch.route,
+      index: beforeSwitch.index,
+      answers: beforeSwitch.answers,
+      locale: 'en',
+    });
+    expect(storage.getItem(LOCALE_KEY)).toBe('en');
+    expect(clearTimeout).toHaveBeenCalledWith(17);
+    expect(scrollTo).toHaveBeenCalledTimes(scrollCalls);
+    expect(headingFocus).toHaveBeenCalledTimes(headingFocusCalls);
+    expect(activeLocaleFocus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(languageStatus.textContent).toContain('English');
   });
 });
 
@@ -161,7 +387,7 @@ describe('core screen markup', () => {
       index: 0,
       order: [...canonicalOrder],
       answers: { 1: 4 },
-    });
+    }, 'zh-CN');
     const html = renderQuiz(state);
 
     expect(html).toContain('第 1 题，共 32 题');
@@ -179,7 +405,7 @@ describe('core screen markup', () => {
         index: 24,
         order: [...canonicalOrder],
         answers: {},
-      }),
+      }, 'zh-CN'),
       chapterIntroVisible: true,
     };
     const html = renderQuiz(state);

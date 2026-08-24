@@ -1,5 +1,8 @@
 import { buildFacetResult } from '../domain/result';
 import { drawShareCard } from '../domain/share';
+import { getCatalog } from '../i18n/catalog';
+import { detectLocale, isLocale, saveLocale } from '../i18n/locale';
+import type { LocaleCatalog } from '../i18n/types';
 import {
   PROGRESS_KEY,
   appendHistory,
@@ -61,6 +64,23 @@ function storageContainsProgress(storage: Storage): boolean {
   }
 }
 
+function getBrowserLanguages(): readonly string[] {
+  if (navigator.languages.length > 0) {
+    return navigator.languages;
+  }
+  return navigator.language === '' ? [] : [navigator.language];
+}
+
+function syncDocumentMetadata(copy: LocaleCatalog): void {
+  document.documentElement.lang = copy.meta.locale;
+  document.title = copy.meta.title;
+  document.querySelector('meta[name="description"]')?.setAttribute('content', copy.meta.description);
+  const skipLink = document.querySelector<HTMLAnchorElement>('.skip-link');
+  if (skipLink !== null) {
+    skipLink.textContent = copy.common.skipToMain;
+  }
+}
+
 export function createAppController(
   root: HTMLElement,
   options: ControllerOptions = {},
@@ -69,7 +89,10 @@ export function createAppController(
   const answerDelayMs = options.answerDelayMs ?? 220;
   const savedProgress = loadProgress(storage);
   const hadUnreadableProgress = savedProgress === null && storageContainsProgress(storage);
-  let state = savedProgress === null ? createInitialState() : restoreAppState(savedProgress);
+  const initialLocale = detectLocale(storage, getBrowserLanguages());
+  let state = savedProgress === null
+    ? createInitialState(undefined, initialLocale)
+    : restoreAppState(savedProgress, initialLocale);
   let advanceTimer: number | null = null;
   let shareMessage = '';
 
@@ -93,7 +116,9 @@ export function createAppController(
   }
 
   function render(moveFocus: boolean): void {
+    const copy = getCatalog(state.locale);
     root.innerHTML = renderScreen(state, loadHistory(storage), shareMessage);
+    syncDocumentMetadata(copy);
     if (hadUnreadableProgress && state.route === 'landing') {
       const notice = document.createElement('p');
       notice.className = 'inline-notice';
@@ -107,7 +132,31 @@ export function createAppController(
     }
   }
 
+  function setLocale(locale: AppState['locale']): void {
+    cancelAdvance();
+    saveLocale(locale, storage);
+    state = reduceAppState(state, { type: 'SET_LOCALE', locale });
+    render(false);
+
+    const copy = getCatalog(locale);
+    const activeButton = root.querySelector<HTMLButtonElement>(
+      `[data-action="set-locale"][data-locale="${locale}"]`,
+    );
+    activeButton?.focus({ preventScroll: true });
+    const status = root.querySelector<HTMLElement>('[data-locale-status]');
+    if (status !== null) {
+      const languageName = locale === 'zh-CN'
+        ? copy.localeSwitcher.chinese
+        : copy.localeSwitcher.english;
+      status.textContent = `${copy.localeSwitcher.changedTo} ${languageName}`;
+    }
+  }
+
   function dispatch(action: AppAction, moveFocus = true): void {
+    if (action.type === 'SET_LOCALE') {
+      setLocale(action.locale);
+      return;
+    }
     state = reduceAppState(state, action);
     persist();
     render(moveFocus);
@@ -263,6 +312,13 @@ export function createAppController(
     }
     const action = target.dataset.action;
     switch (action) {
+      case 'set-locale': {
+        const locale = target.dataset.locale;
+        if (isLocale(locale)) {
+          dispatch({ type: 'SET_LOCALE', locale }, false);
+        }
+        break;
+      }
       case 'start':
         dispatch({ type: 'START' });
         break;

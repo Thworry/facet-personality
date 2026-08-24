@@ -1,5 +1,6 @@
 import { QUESTIONS } from '../data/questions';
 import type { SavedProgress } from '../domain/storage';
+import type { Locale } from '../i18n/types';
 import type { Answers, FacetResult } from '../types';
 
 export type AppRoute = 'landing' | 'intro' | 'quiz' | 'result' | 'atlas' | 'history';
@@ -7,6 +8,7 @@ type ReturnRoute = Exclude<AppRoute, 'atlas' | 'history'>;
 export type AnswerValue = 1 | 2 | 3 | 4 | 5;
 
 export interface AppState {
+  locale: Locale;
   route: AppRoute;
   returnRoute: ReturnRoute;
   index: number;
@@ -26,6 +28,7 @@ export type AppAction =
   | { type: 'SHOW_HISTORY' }
   | { type: 'SHOW_RESULT'; result: FacetResult }
   | { type: 'RETEST_WEATHER'; order: number[] }
+  | { type: 'SET_LOCALE'; locale: Locale }
   | { type: 'RESET' };
 
 export type RandomSource = () => number;
@@ -52,8 +55,12 @@ export function createQuestionOrder(random: RandomSource = cryptoRandom): number
   return [...shuffled(core, random), ...shuffled(recent, random)];
 }
 
-export function createInitialState(order: number[] = createQuestionOrder()): AppState {
+export function createInitialState(
+  order: number[] = createQuestionOrder(),
+  locale: Locale = 'zh-CN',
+): AppState {
   return {
+    locale,
     route: 'landing',
     returnRoute: 'landing',
     index: 0,
@@ -64,8 +71,9 @@ export function createInitialState(order: number[] = createQuestionOrder()): App
   };
 }
 
-export function restoreAppState(progress: SavedProgress): AppState {
+export function restoreAppState(progress: SavedProgress, locale: Locale): AppState {
   return {
+    locale,
     route: progress.route,
     returnRoute: progress.route,
     index: progress.index,
@@ -213,7 +221,9 @@ export function reduceAppState(state: AppState, action: AppAction): AppState {
         chapterIntroVisible: false,
       };
     }
+    case 'SET_LOCALE':
+      return { ...state, locale: action.locale };
     case 'RESET':
-      return createInitialState(createQuestionOrder());
+      return createInitialState(createQuestionOrder(), state.locale);
   }
 }

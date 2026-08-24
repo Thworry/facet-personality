@@ -11,4 +11,8 @@ if (app === null) {
   throw new Error('FACET application root was not found');
 }
 
-createAppController(app);
+const controller = createAppController(app);
+
+if (import.meta.hot !== undefined) {
+  import.meta.hot.dispose(() => controller.destroy());
+}
