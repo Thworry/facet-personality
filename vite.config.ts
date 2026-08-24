@@ -9,5 +9,8 @@ export default defineConfig({
     sourcemap: false,
     target: 'es2022',
   },
-  test: { environment: 'node' },
+  test: {
+    environment: 'node',
+    include: ['tests/**/*.test.ts'],
+  },
 });
