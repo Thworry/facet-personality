@@ -1,8 +1,11 @@
 import { buildFacetResult } from '../domain/result';
+import { drawShareCard } from '../domain/share';
 import {
   PROGRESS_KEY,
   appendHistory,
+  clearAllLocalData,
   clearProgress,
+  loadHistory,
   loadProgress,
   saveProgress,
 } from '../domain/storage';
@@ -18,6 +21,9 @@ import {
 import { renderIntro } from './screens/intro';
 import { renderLanding } from './screens/landing';
 import { renderQuiz } from './screens/quiz';
+import { renderAtlas } from './screens/atlas';
+import { renderHistory } from './screens/history';
+import { renderResult } from './screens/result';
 
 export interface AppController {
   getState(): AppState;
@@ -30,17 +36,7 @@ export interface ControllerOptions {
   answerDelayMs?: number;
 }
 
-function renderPlaceholder(title: string, backLabel: string): string {
-  return `
-    <section class="screen screen--placeholder" aria-labelledby="screen-title">
-      <h1 id="screen-title" tabindex="-1">${title}</h1>
-      <p>这段线路正在接入。</p>
-      <button type="button" data-action="back">${backLabel}</button>
-    </section>
-  `;
-}
-
-function renderScreen(state: AppState): string {
+function renderScreen(state: AppState, history: ReturnType<typeof loadHistory>, shareMessage: string): string {
   switch (state.route) {
     case 'landing':
       return renderLanding();
@@ -49,11 +45,11 @@ function renderScreen(state: AppState): string {
     case 'quiz':
       return renderQuiz(state);
     case 'result':
-      return renderPlaceholder('你的切面已经汇合', '返回首页');
+      return state.result === null ? renderLanding() : renderResult(state.result, shareMessage);
     case 'atlas':
-      return renderPlaceholder('十二种原型图鉴', '返回');
+      return renderAtlas();
     case 'history':
-      return renderPlaceholder('本地历史', '返回');
+      return renderHistory(history);
   }
 }
 
@@ -75,6 +71,7 @@ export function createAppController(
   const hadUnreadableProgress = savedProgress === null && storageContainsProgress(storage);
   let state = savedProgress === null ? createInitialState() : restoreAppState(savedProgress);
   let advanceTimer: number | null = null;
+  let shareMessage = '';
 
   function cancelAdvance(): void {
     if (advanceTimer !== null) {
@@ -96,7 +93,7 @@ export function createAppController(
   }
 
   function render(moveFocus: boolean): void {
-    root.innerHTML = renderScreen(state);
+    root.innerHTML = renderScreen(state, loadHistory(storage), shareMessage);
     if (hadUnreadableProgress && state.route === 'landing') {
       const notice = document.createElement('p');
       notice.className = 'inline-notice';
@@ -123,6 +120,7 @@ export function createAppController(
       const result = buildFacetResult(state.answers);
       appendHistory(result, storage);
       clearProgress(storage);
+      shareMessage = '';
       dispatch({ type: 'SHOW_RESULT', result });
     } catch (error) {
       const message = error instanceof Error ? error.message : '结果生成失败';
@@ -130,6 +128,98 @@ export function createAppController(
       if (status !== null) {
         status.textContent = `${message}。请检查最后一题后再试。`;
       }
+    }
+  }
+
+  function setShareStatus(message: string): void {
+    shareMessage = message;
+    const status = root.querySelector<HTMLElement>('[data-share-status]');
+    if (status !== null) {
+      status.textContent = message;
+    }
+  }
+
+  function downloadShareCard(): void {
+    if (state.route !== 'result' || state.result === null) {
+      return;
+    }
+    const result = state.result;
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1440;
+    const context = canvas.getContext('2d');
+    if (context === null || typeof canvas.toBlob !== 'function') {
+      setShareStatus('当前浏览器无法生成图片，请直接截取结果封面保存。');
+      return;
+    }
+
+    try {
+      drawShareCard(context, result, 1);
+      canvas.toBlob((blob) => {
+        if (blob === null) {
+          setShareStatus('图片生成没有完成，请直接截取结果封面保存。');
+          return;
+        }
+        try {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `FACET-${result.primary.code}.png`;
+          link.hidden = true;
+          document.body.append(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 0);
+          setShareStatus('分享卡已在本地生成，逐题答案没有上传。');
+        } catch {
+          setShareStatus('图片已生成但下载未启动，请直接截取结果封面保存。');
+        }
+      }, 'image/png');
+    } catch {
+      setShareStatus('当前浏览器无法生成图片，请直接截取结果封面保存。');
+    }
+  }
+
+  function showClearDialog(): void {
+    const dialog = root.querySelector<HTMLDialogElement>('#clear-data-dialog');
+    if (dialog === null) {
+      return;
+    }
+    if (typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    } else {
+      dialog.setAttribute('open', '');
+    }
+  }
+
+  function closeClearDialog(): void {
+    const dialog = root.querySelector<HTMLDialogElement>('#clear-data-dialog');
+    if (dialog === null) {
+      return;
+    }
+    if (typeof dialog.close === 'function') {
+      dialog.close();
+    } else {
+      dialog.removeAttribute('open');
+    }
+  }
+
+  function clearLocalArchive(): void {
+    const success = clearAllLocalData(storage);
+    if (!success) {
+      const status = root.querySelector<HTMLElement>('[data-history-status]');
+      if (status !== null) {
+        status.textContent = '浏览器没有允许删除本地数据，请检查站点存储设置后重试。';
+      }
+      return;
+    }
+    shareMessage = '';
+    const reset = reduceAppState(state, { type: 'RESET' });
+    state = reduceAppState(reset, { type: 'SHOW_HISTORY' });
+    render(true);
+    const status = root.querySelector<HTMLElement>('[data-history-status]');
+    if (status !== null) {
+      status.textContent = 'FACET 的未完成进度和历史结果已清除。';
     }
   }
 
@@ -156,6 +246,7 @@ export function createAppController(
     cancelAdvance();
     const expectedIndex = state.index;
     dispatch({ type: 'ANSWER', questionId, value }, false);
+    root.querySelector<HTMLInputElement>(`#answer-${value}`)?.focus({ preventScroll: true });
     advanceTimer = window.setTimeout(() => {
       advanceTimer = null;
       if (state.route === 'quiz' && state.index === expectedIndex && state.answers[questionId] !== undefined) {
@@ -191,6 +282,37 @@ export function createAppController(
       case 'show-history':
         cancelAdvance();
         dispatch({ type: 'SHOW_HISTORY' });
+        break;
+      case 'open-result': {
+        const resultId = target.dataset.resultId;
+        const result = loadHistory(storage).find((entry) => entry.id === resultId);
+        if (result !== undefined) {
+          shareMessage = '';
+          dispatch({ type: 'SHOW_RESULT', result });
+        }
+        break;
+      }
+      case 'share':
+        downloadShareCard();
+        break;
+      case 'retest-all':
+        cancelAdvance();
+        clearProgress(storage);
+        dispatch({ type: 'START' });
+        break;
+      case 'retest-weather':
+        cancelAdvance();
+        dispatch({ type: 'RETEST_WEATHER', order: createQuestionOrder() });
+        break;
+      case 'request-clear':
+        showClearDialog();
+        break;
+      case 'cancel-clear':
+        closeClearDialog();
+        break;
+      case 'confirm-clear':
+        closeClearDialog();
+        clearLocalArchive();
         break;
       case 'reset':
         cancelAdvance();

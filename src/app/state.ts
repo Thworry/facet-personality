@@ -25,6 +25,7 @@ export type AppAction =
   | { type: 'SHOW_ATLAS' }
   | { type: 'SHOW_HISTORY' }
   | { type: 'SHOW_RESULT'; result: FacetResult }
+  | { type: 'RETEST_WEATHER'; order: number[] }
   | { type: 'RESET' };
 
 export type RandomSource = () => number;
@@ -197,6 +198,21 @@ export function reduceAppState(state: AppState, action: AppAction): AppState {
         result: action.result,
         chapterIntroVisible: false,
       };
+    case 'RETEST_WEATHER': {
+      const coreAnswers = Object.fromEntries(
+        Object.entries(state.answers).filter(([questionId]) => Number(questionId) <= 24),
+      ) as Answers;
+      return {
+        ...state,
+        route: 'quiz',
+        returnRoute: 'quiz',
+        index: 24,
+        order: [...action.order],
+        answers: coreAnswers,
+        result: null,
+        chapterIntroVisible: false,
+      };
+    }
     case 'RESET':
       return createInitialState(createQuestionOrder());
   }

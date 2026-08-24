@@ -11,6 +11,10 @@ import {
 import { renderIntro } from '../src/app/screens/intro';
 import { renderLanding } from '../src/app/screens/landing';
 import { renderQuiz } from '../src/app/screens/quiz';
+import { renderAtlas } from '../src/app/screens/atlas';
+import { renderHistory } from '../src/app/screens/history';
+import { renderResult } from '../src/app/screens/result';
+import { buildFacetResult } from '../src/domain/result';
 
 const canonicalOrder = QUESTIONS.map((question) => question.id);
 
@@ -106,6 +110,22 @@ describe('application state reducer', () => {
     expect(canCompleteQuiz(incomplete)).toBe(false);
     expect(canCompleteQuiz(complete)).toBe(true);
   });
+
+  it('can retest only recent weather while preserving the 24 core answers', () => {
+    const answers = Object.fromEntries(canonicalOrder.map((id) => [id, 4])) as Answers;
+    const result = buildFacetResult(answers, 'weather-retest', '2026-08-24T00:00:00.000Z');
+    const resultState = reduceAppState(
+      { ...createInitialState(canonicalOrder), answers },
+      { type: 'SHOW_RESULT', result },
+    );
+    const retest = reduceAppState(resultState, {
+      type: 'RETEST_WEATHER',
+      order: [...canonicalOrder],
+    });
+
+    expect(retest).toMatchObject({ route: 'quiz', index: 24, chapterIntroVisible: false });
+    expect(Object.keys(retest.answers).map(Number).sort((a, b) => a - b)).toEqual(canonicalOrder.slice(0, 24));
+  });
 });
 
 describe('core screen markup', () => {
@@ -166,5 +186,47 @@ describe('core screen markup', () => {
     expect(html).toContain('接下来只看最近两周');
     expect(html).toContain('data-action="next"');
     expect(html).not.toContain('name="answer"');
+  });
+});
+
+describe('result and archive markup', () => {
+  const answers = Object.fromEntries(canonicalOrder.map((id) => [id, 3])) as Answers;
+  const result = buildFacetResult(answers, 'screen-result', '2026-08-24T00:00:00.000Z');
+
+  it('renders the complete layered result with eight accessible meters', () => {
+    const html = renderResult(result);
+
+    expect(html).toContain(result.primary.name);
+    expect(html).toContain(result.adjacent.name);
+    expect(html).toContain('为什么是它');
+    expect(html).toContain('当前天气');
+    expect(html).toContain('关系中的使用说明');
+    expect(html.match(/<meter /g)).toHaveLength(8);
+    expect(html).toContain('data-action="share"');
+    expect(html).toContain('data-action="retest-weather"');
+    expect(html).toContain('娱乐与自我观察用途');
+  });
+
+  it('leads with free-facet language when no single template fits', () => {
+    const html = renderResult({ ...result, clarity: 'free' });
+    expect(html).toContain('<h1 id="screen-title" tabindex="-1">自由切面</h1>');
+    expect(html).toContain('最近的两个参考');
+  });
+
+  it('lists all twelve archetypes without rarity claims', () => {
+    const html = renderAtlas();
+    expect(html.match(/data-archetype=/g)).toHaveLength(12);
+    expect(html).toContain('ARCHIVE');
+    expect(html).toContain('TOWER');
+    expect(html).not.toContain('全国仅');
+    expect(html).not.toContain('最稀有');
+  });
+
+  it('renders local history entries and an explicit confirmation dialog', () => {
+    const html = renderHistory([result]);
+    expect(html).toContain('screen-result');
+    expect(html).toContain('data-action="open-result"');
+    expect(html).toContain('<dialog');
+    expect(html).toContain('data-action="confirm-clear"');
   });
 });
