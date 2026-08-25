@@ -1,66 +1,83 @@
-# FACET｜人格切面
+[中文说明](README.zh-CN.md)
 
-FACET 是一个完全在浏览器本地运行的娱乐向人格自我观察工具。32 个生活场景会生成六条核心维度、两个近期状态信号、一个核心原型、相邻切面与“当前天气”；它不上传逐题答案，也不把结果包装成心理诊断或准确率。
+# FACET · Personality Facets
 
-## 本地运行
+FACET is a bilingual, local-first personality reflection quiz built from 32 everyday scenarios. It maps six core tendencies and two recent-state signals without pretending to diagnose you, or crown a rarest type.
 
-项目固定使用仓库内已锁定的依赖。当前 Codex 环境没有 `npx`，请通过可用的 `pnpm` 执行命令：
+**Live demo:** pending the first deployment at [thworry.github.io/facet-personality](https://thworry.github.io/facet-personality/).
 
-```bash
-FACET_PNPM=/Users/jojo/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm
-"$FACET_PNPM" install --frozen-lockfile
-"$FACET_PNPM" run dev
-```
+![FACET result screen in English](docs/assets/preview-en.png)
 
-开发服务器默认监听 `http://127.0.0.1:5173`。应用没有后台、账号、分析脚本或第三方网络依赖。
+## What it does
 
-## 自动化验证
+FACET asks what you usually do, then briefly checks how the past two weeks have felt. The result includes:
 
-```bash
-FACET_PNPM=/Users/jojo/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm
-"$FACET_PNPM" test
-"$FACET_PNPM" exec tsc --noEmit
-"$FACET_PNPM" run build
-"$FACET_PNPM" exec playwright install chromium
-"$FACET_PNPM" run test:e2e
-```
+- six continuous core lines: inner compass, starting rhythm, planning style, social recharge, boundary strength, and expression strategy;
+- two recent signals for load and recovery flexibility;
+- a nearest archetype, an adjacent facet, and one of four current-weather descriptions;
+- practical notes, local history for up to three results, and a share card generated in your browser.
 
-Playwright 会直接使用 `./node_modules/.bin/vite` 启动测试服务器，因此不依赖全局 `npm` 或 `npx`。测试矩阵包括：
+There are 12 archetypes, but no velvet rope around any of them. They are reference points on continuous dimensions, not ranks, rarities, or permanent identities.
 
-E2E 默认使用 `4173` 端口；若该端口已被其他本地项目占用，可执行 `FACET_E2E_PORT=4183 "$FACET_PNPM" run test:e2e`，应用与测试会共同切换到该端口。
+Changing the language changes presentation only. The Chinese and English versions share the same question IDs, scoring directions, thresholds, and archetype centers. That consistency does not establish cross-cultural psychometric equivalence.
 
-- `mobile-chromium`：390 × 844，触摸环境；
-- `desktop-chromium`：1280 × 900；
-- `reduced-motion`：390 × 844，启用减少动态效果；
-- 32 题完整流程、章节换乘、结果解释、十二原型图鉴、本地 PNG 下载与历史记录；
-- Tab、数字键 1–5、Enter、ArrowLeft；
-- 五题后刷新恢复与旧答案保留；
-- FACET 本地进度和历史的确认删除、测试上下文隔离。
+## Privacy and boundaries
 
-失败时会在 `test-results/` 保留截图与 trace，在 `playwright-report/` 生成本地 HTML 报告；两者均被 `.gitignore` 排除。
+The quiz runs entirely in your browser. FACET has no account system, analytics script, ad tracker, or answer upload. Unfinished progress, language preference, and up to three results stay in local storage until you clear them. Share cards are drawn with Canvas and downloaded locally.
 
-### 最近一次验证
+FACET is for entertainment and self-reflection. It is not a peer-reviewed psychological scale and should not be used for diagnosis, hiring, career decisions, or verdicts about a relationship.
 
-2026-08-24 11:43 CST 使用 Chromium 140（Playwright build 1187）完成：
+## How scoring works
 
-- Vitest：6 个文件、47 项测试全部通过；
-- 严格 TypeScript：`tsc --noEmit` 无诊断；
-- Playwright：3 个项目、15 项测试全部通过；
-- 单文件构建：`dist/index.html` 75.77 kB，gzip 24.02 kB。
+Each answer uses a five-point scale. Reverse-keyed questions are flipped before each dimension's four answers are averaged and mapped to 0 to 100. Neither end of a dimension is better.
 
-## 构建单文件版本
+The six core scores are compared with 12 fixed archetype centers using normalized Euclidean distance. The two nearest centers become the primary and adjacent references. Separate, explicit thresholds determine result clarity, the standout line, and the recent-weather label. The scoring metadata is language-neutral and covered by tests in `tests/scoring.test.ts` and `tests/result.test.ts`.
+
+## Development
+
+Requirements: Node.js 24 or newer and pnpm 11.19.0.
 
 ```bash
-FACET_PNPM=/Users/jojo/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm
-"$FACET_PNPM" run build
+pnpm install --frozen-lockfile
+pnpm dev
+pnpm test
+pnpm test:e2e
+pnpm build
 ```
 
-`vite-plugin-singlefile` 会把脚本与样式内联到 `dist/index.html`。最终交付前应再次检查该文件没有外部脚本、样式、字体、图片、分析或网络依赖。
+`pnpm dev` starts the local Vite server. `pnpm build` produces a self-contained `dist/index.html` with scripts and styles inlined.
 
-## 数据边界
+On a fresh machine, install the pinned Playwright browser once with `pnpm exec playwright install chromium` before running `pnpm test:e2e`.
 
-- 未完成进度保存在 `facet:v1:progress`；
-- 最近三次结果保存在 `facet:v1:history`；
-- “清除我的全部本地数据”只删除以上两个 FACET 键；
-- 分享卡由 Canvas 在本地生成，不包含八维精确分数，不上传数据；
-- 产品仅用于娱乐与自我观察，不用于诊断、招聘、职业选择或关系判决。
+## Tests
+
+- Vitest checks scoring, result assembly, storage migration, locale catalogs, renderers, Canvas output, and release packaging.
+- Playwright runs complete Chinese and English journeys on mobile, desktop, and reduced-motion projects.
+- Browser coverage includes keyboard use, language switching without state loss, local-data deletion, PNG downloads, long English copy, and third-party request detection.
+
+The browser suite uses port `4173` by default. Set `FACET_E2E_PORT` if that port is occupied:
+
+```bash
+FACET_E2E_PORT=4183 pnpm test:e2e
+```
+
+## Project structure
+
+```text
+src/app/       state, controller, and screen renderers
+src/data/      language-neutral question and archetype definitions
+src/domain/    scoring, result, storage, and Canvas share logic
+src/i18n/      typed locale catalogs and locale selection
+src/styles/    tokens, layouts, components, and responsive rules
+tests/         Vitest unit and release tests
+e2e/           local and online Playwright journeys
+docs/assets/   browser-captured bilingual previews
+```
+
+## Contributing
+
+Bug reports, copy corrections, accessibility fixes, and carefully scoped product improvements are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+FACET is released under the [MIT License](LICENSE).
