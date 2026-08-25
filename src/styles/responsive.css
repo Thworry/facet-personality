@@ -1,4 +1,8 @@
 @media (min-width: 40rem) {
+  [lang="en"] .dual-facet-title > span:not(:nth-child(2)) {
+    white-space: nowrap;
+  }
+
   .landing-line {
     grid-template-columns: repeat(32, minmax(0, 1fr));
     gap: 0;
