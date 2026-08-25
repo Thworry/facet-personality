@@ -4,7 +4,7 @@
 
 FACET is a bilingual, local-first personality reflection quiz built from 32 everyday scenarios. It maps six core tendencies and two recent-state signals without pretending to diagnose you, or crown a rarest type.
 
-**Live demo:** pending the first deployment at [thworry.github.io/facet-personality](https://thworry.github.io/facet-personality/).
+**Live demo:** [thworry.github.io/facet-personality](https://thworry.github.io/facet-personality/)
 
 ![FACET result screen in English](docs/assets/preview-en.png)
 
