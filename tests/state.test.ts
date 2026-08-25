@@ -353,6 +353,173 @@ describe('controller locale metadata', () => {
     expect(activeLocaleFocus).toHaveBeenCalledWith({ preventScroll: true });
     expect(languageStatus.textContent).toContain('English');
   });
+
+  it('uses localized share feedback when the browser cannot create a canvas', () => {
+    class FakeShareElement {
+      constructor(readonly dataset: DOMStringMap) {}
+
+      closest(): FakeShareElement {
+        return this;
+      }
+    }
+    class FakeCanvasElement {
+      width = 0;
+      height = 0;
+      toBlob = () => undefined;
+      getContext = () => null;
+    }
+
+    const storage = new MemoryStorage();
+    storage.setItem(LOCALE_KEY, 'en');
+    const listeners = new Map<string, EventListener>();
+    const shareStatus = { textContent: '' };
+    const root = {
+      innerHTML: '',
+      querySelector: vi.fn((selector: string) => {
+        if (selector === '[data-share-status]') return shareStatus;
+        if (selector === 'meta[name="description"]') return { setAttribute: vi.fn() };
+        if (selector === '.skip-link') return { textContent: '' };
+        return { focus: vi.fn(), style: {} };
+      }),
+      addEventListener: vi.fn((type: string, listener: EventListener) => {
+        listeners.set(type, listener);
+      }),
+      removeEventListener: vi.fn(),
+    } as unknown as HTMLElement;
+
+    vi.stubGlobal('document', {
+      documentElement: { lang: '' },
+      title: '',
+      querySelector: vi.fn((selector: string) =>
+        selector === 'meta[name="description"]'
+          ? { setAttribute: vi.fn() }
+          : selector === '.skip-link'
+            ? { textContent: '' }
+            : null,
+      ),
+      createElement: vi.fn(() => new FakeCanvasElement()),
+      body: { append: vi.fn() },
+    });
+    vi.stubGlobal('navigator', { languages: ['en-US'], language: 'en-US' });
+    vi.stubGlobal('Element', FakeShareElement);
+    vi.stubGlobal('window', {
+      scrollTo: vi.fn(),
+      clearTimeout: vi.fn(),
+      setTimeout: vi.fn(),
+    });
+
+    const controller = createAppController(root, { storage });
+    const english = CATALOGS.en;
+    controller.dispatch({
+      type: 'SHOW_RESULT',
+      result: buildFacetResult(
+        Object.fromEntries(QUESTIONS.map((question) => [question.id, 4])) as Answers,
+        'feedback-result',
+        '2026-08-24T00:00:00.000Z',
+      ),
+    });
+
+    listeners.get('click')?.({
+      target: new FakeShareElement({ action: 'share' } as DOMStringMap),
+    } as unknown as Event);
+
+    expect(shareStatus.textContent).toBe(english.feedback.canvasUnsupported);
+  });
+
+  it('uses localized share feedback when the browser cannot download the generated image', () => {
+    class FakeShareElement {
+      constructor(readonly dataset: DOMStringMap) {}
+
+      closest(): FakeShareElement {
+        return this;
+      }
+    }
+    class FakeCanvasContext {
+      fillStyle = '';
+      strokeStyle = '';
+      lineWidth = 1;
+      font = '';
+      textAlign: CanvasTextAlign = 'start';
+      textBaseline: CanvasTextBaseline = 'alphabetic';
+      save = vi.fn();
+      restore = vi.fn();
+      scale = vi.fn();
+      fillRect = vi.fn();
+      beginPath = vi.fn();
+      moveTo = vi.fn();
+      lineTo = vi.fn();
+      stroke = vi.fn();
+      arc = vi.fn();
+      fill = vi.fn();
+      fillText = vi.fn();
+      measureText = vi.fn(() => ({ width: 100 }));
+    }
+    class FakeCanvasElement {
+      width = 0;
+      height = 0;
+      toBlob = (_callback: (blob: Blob | null) => void) => _callback(null);
+      getContext = () => new FakeCanvasContext();
+    }
+
+    const storage = new MemoryStorage();
+    storage.setItem(LOCALE_KEY, 'zh-CN');
+    const listeners = new Map<string, EventListener>();
+    const shareStatus = { textContent: '' };
+    const root = {
+      innerHTML: '',
+      querySelector: vi.fn((selector: string) => {
+        if (selector === '[data-share-status]') return shareStatus;
+        if (selector === 'meta[name="description"]') return { setAttribute: vi.fn() };
+        if (selector === '.skip-link') return { textContent: '' };
+        return { focus: vi.fn(), style: {} };
+      }),
+      addEventListener: vi.fn((type: string, listener: EventListener) => {
+        listeners.set(type, listener);
+      }),
+      removeEventListener: vi.fn(),
+    } as unknown as HTMLElement;
+
+    vi.stubGlobal('document', {
+      documentElement: { lang: '' },
+      title: '',
+      querySelector: vi.fn((selector: string) =>
+        selector === 'meta[name="description"]'
+          ? { setAttribute: vi.fn() }
+          : selector === '.skip-link'
+            ? { textContent: '' }
+            : null,
+      ),
+      createElement: vi.fn(() => new FakeCanvasElement()),
+      body: { append: vi.fn() },
+    });
+    vi.stubGlobal('navigator', { languages: ['zh-CN'], language: 'zh-CN' });
+    vi.stubGlobal('Element', FakeShareElement);
+    vi.stubGlobal('window', {
+      scrollTo: vi.fn(),
+      clearTimeout: vi.fn(),
+      setTimeout: vi.fn((callback: () => void) => {
+        callback();
+        return 7;
+      }),
+    });
+
+    const controller = createAppController(root, { storage });
+    const chinese = CATALOGS['zh-CN'];
+    controller.dispatch({
+      type: 'SHOW_RESULT',
+      result: buildFacetResult(
+        Object.fromEntries(QUESTIONS.map((question) => [question.id, 4])) as Answers,
+        'feedback-result',
+        '2026-08-24T00:00:00.000Z',
+      ),
+    });
+
+    listeners.get('click')?.({
+      target: new FakeShareElement({ action: 'share' } as DOMStringMap),
+    } as unknown as Event);
+
+    expect(shareStatus.textContent).toBe(chinese.feedback.emptyBlob);
+  });
 });
 
 describe('core screen markup', () => {

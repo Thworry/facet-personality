@@ -178,11 +178,10 @@ export function createAppController(
       shareMessage = '';
       dispatch({ type: 'SHOW_RESULT', result });
     } catch (error) {
-      const message = error instanceof Error ? error.message : '结果生成失败';
       const currentCopy = getCatalog(state.locale);
       const status = root.querySelector<HTMLElement>('[data-quiz-status]');
       if (status !== null) {
-        status.textContent = `${message}。${currentCopy.feedback.quizResultFailure}`;
+        status.textContent = currentCopy.feedback.quizResultFailure;
       }
     }
   }
@@ -199,21 +198,22 @@ export function createAppController(
     if (state.route !== 'result' || state.result === null) {
       return;
     }
+    const currentCopy = getCatalog(state.locale);
     const result = state.result;
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
     canvas.height = 1440;
     const context = canvas.getContext('2d');
     if (context === null || typeof canvas.toBlob !== 'function') {
-      setShareStatus('当前浏览器无法生成图片，请直接截取结果封面保存。');
+      setShareStatus(currentCopy.feedback.canvasUnsupported);
       return;
     }
 
     try {
-      drawShareCard(context, result, 1);
+      drawShareCard(context, result, currentCopy, 1);
       canvas.toBlob((blob) => {
         if (blob === null) {
-          setShareStatus('图片生成没有完成，请直接截取结果封面保存。');
+          setShareStatus(currentCopy.feedback.emptyBlob);
           return;
         }
         try {
@@ -226,13 +226,13 @@ export function createAppController(
           link.click();
           link.remove();
           window.setTimeout(() => URL.revokeObjectURL(url), 0);
-          setShareStatus('分享卡已在本地生成，逐题答案没有上传。');
+          setShareStatus(currentCopy.feedback.shareSuccess);
         } catch {
-          setShareStatus('图片已生成但下载未启动，请直接截取结果封面保存。');
+          setShareStatus(currentCopy.feedback.downloadFailure);
         }
       }, 'image/png');
     } catch {
-      setShareStatus('当前浏览器无法生成图片，请直接截取结果封面保存。');
+      setShareStatus(currentCopy.feedback.canvasUnsupported);
     }
   }
 

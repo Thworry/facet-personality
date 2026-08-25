@@ -65,7 +65,7 @@ describe('local share-card renderer', () => {
     })();
     const context = new RecordingContext();
 
-    drawShareCard(context, result, 1);
+    drawShareCard(context, result, zhCatalog, 1);
 
     const text = context.text.join(' ');
     expect(text).toContain('FACET');
@@ -83,9 +83,43 @@ describe('local share-card renderer', () => {
     const primaryCopy = CATALOGS['zh-CN'].archetypes[result.primary.code];
     const context = new RecordingContext();
 
-    drawShareCard(context, result, 2);
+    drawShareCard(context, result, CATALOGS['zh-CN'], 2);
 
     expect(context.scales).toContainEqual([2, 2]);
     expect(context.text.join(' ')).toContain(primaryCopy.name);
+  });
+
+  it('supports bilingual branding and copy in the share card', () => {
+    const result = buildFacetResult(neutralAnswers, 'share-card-result', '2026-08-24T00:00:00.000Z');
+
+    const zhContext = new RecordingContext();
+    const zhCopy = CATALOGS['zh-CN'];
+    drawShareCard(zhContext, result, zhCopy, 1);
+    const zhText = zhContext.text.join(' ');
+
+    expect(zhText).toContain('娱乐向自我观察');
+    expect(zhText).toContain(zhCopy.archetypes[result.primary.code].name);
+
+    const enContext = new RecordingContext();
+    const enCopy = CATALOGS.en;
+    drawShareCard(enContext, result, enCopy, 1);
+    const enText = enContext.text.join(' ');
+
+    expect(enText).toContain('For entertainment and self-reflection');
+    expect(enText).toContain(enCopy.archetypes[result.primary.code].name);
+  });
+
+  it('wraps English copy at word boundaries and keeps punctuation intact', () => {
+    const result = buildFacetResult(neutralAnswers, 'english-wrap-result', '2026-08-24T00:00:00.000Z');
+    const context = new RecordingContext();
+
+    drawShareCard(context, result, CATALOGS.en, 1);
+    const lines = context.text.filter((line) => line.length > 0);
+
+    const expectedWords = ['Your', 'operating', 'notes', '—', 'warranty', 'not', 'included,', 'practical', 'guidance', 'included.'];
+    for (const word of expectedWords) {
+      expect(lines.some((line) => line.includes(word))).toBe(true);
+    }
+    expect(lines.some((line) => line.includes('included.'))).toBe(true);
   });
 });
