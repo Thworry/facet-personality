@@ -242,6 +242,12 @@
   }
 }
 
+[lang="en"] .landing-deck,
+[lang="en"] .intro-copy,
+[lang="en"] .screen--result section > p {
+  max-inline-size: 72ch;
+}
+
 @media (orientation: landscape) and (max-height: 32rem) {
   .landing-hero,
   .question-panel,

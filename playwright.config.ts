@@ -1,7 +1,16 @@
 import { defineConfig } from '@playwright/test';
 
 const port = process.env.FACET_E2E_PORT ?? '4173';
-const baseURL = `http://127.0.0.1:${port}`;
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+const useLocalServer = process.env.PLAYWRIGHT_BASE_URL === undefined;
+const localWebServer = useLocalServer
+  ? {
+    command: `./node_modules/.bin/vite --host 127.0.0.1 --port ${port}`,
+    url: `http://127.0.0.1:${port}`,
+    reuseExistingServer: false,
+    timeout: 30_000,
+  }
+  : undefined;
 
 export default defineConfig({
   testDir: './e2e',
@@ -13,6 +22,7 @@ export default defineConfig({
   expect: {
     timeout: 8_000,
   },
+  testIgnore: [/e2e\/online\.spec\.ts$/],
   reporter: [
     ['list'],
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
@@ -26,12 +36,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: `./node_modules/.bin/vite --host 127.0.0.1 --port ${port}`,
-    url: baseURL,
-    reuseExistingServer: false,
-    timeout: 30_000,
-  },
+  ...(useLocalServer && { webServer: localWebServer }),
   projects: [
     {
       name: 'mobile-chromium',

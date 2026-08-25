@@ -12,6 +12,7 @@
   line-height: 1.25;
   text-align: center;
   text-decoration: none;
+  overflow-wrap: anywhere;
   transition:
     background-color var(--duration-quick) ease,
     border-color var(--duration-quick) ease,
@@ -120,8 +121,8 @@
 }
 
 .locale-switcher__button {
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  min-inline-size: 44px;
+  min-block-size: 44px;
   padding: var(--space-2) var(--space-3);
   border: 0;
   border-radius: var(--radius-full);
