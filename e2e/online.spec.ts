@@ -47,7 +47,8 @@ test('@online smoke: bilingual journey on Pages', async ({ page }) => {
 
   await expect(page.locator('[data-screen="quiz"]')).toBeVisible();
   const firstChoice = page.locator('input#answer-3');
-  await firstChoice.check();
+  await page.locator('label[for="answer-3"]').click();
+  await expect(firstChoice).toBeChecked();
   await page.keyboard.press('Enter');
 
   await expect(page.locator('[data-screen="quiz"] .question-number')).toContainText('02 / 32');
