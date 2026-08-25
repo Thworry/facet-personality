@@ -185,13 +185,13 @@ function drawTextBlocks(context: ShareCanvasContext, result: FacetResult, copy: 
     x,
     690,
     904,
-    58,
-    3,
+    50,
+    2,
   );
 
   context.fillStyle = '#D5CFC4';
   context.font = '500 31px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
-  context.fillText(`${copy.share.adjacent}：${result.adjacent.code} · ${adjacentCopy.name}`, x, afterStandout + 46);
+  context.fillText(`${copy.share.adjacent}：${result.adjacent.code} · ${adjacentCopy.name}`, x, afterStandout);
 
   context.fillStyle = '#F8F5EF';
   context.font = copy.meta.locale === 'zh-CN'
@@ -201,7 +201,7 @@ function drawTextBlocks(context: ShareCanvasContext, result: FacetResult, copy: 
     ? '500 30px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
     : '500 36px -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif';
   context.font = operatingFont;
-  drawWrappedText(context, copy.meta.locale, copy.result.operatingNotes, x, afterStandout + 132, 904, 58, 3);
+  drawWrappedText(context, copy.meta.locale, copy.result.operatingNotes, x, afterStandout + 45, 904, 40, 2);
 }
 
 function drawFootnotes(context: ShareCanvasContext, copy: LocaleCatalog, x: number): void {

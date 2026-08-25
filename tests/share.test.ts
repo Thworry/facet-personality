@@ -13,6 +13,7 @@ class RecordingContext implements ShareCanvasContext {
   textAlign: CanvasTextAlign = 'start';
   textBaseline: CanvasTextBaseline = 'alphabetic';
   readonly text: string[] = [];
+  readonly textCalls: Array<{ value: string; y: number; fillStyle: string }> = [];
   readonly scales: Array<[number, number]> = [];
 
   save(): void {}
@@ -29,12 +30,18 @@ class RecordingContext implements ShareCanvasContext {
     this.scales.push([x, y]);
   }
 
-  fillText(value: string): void {
+  fillText(value: string, _x: number, y: number): void {
     this.text.push(value);
+    this.textCalls.push({ value, y, fillStyle: String(this.fillStyle) });
   }
 
   measureText(value: string): Pick<TextMetrics, 'width'> {
-    return { width: [...value].length * 28 };
+    return {
+      width: [...value].reduce(
+        (width, character) => width + (/\p{Script=Han}/u.test(character) ? 28 : 14),
+        0,
+      ),
+    };
   }
 }
 
@@ -121,5 +128,25 @@ describe('local share-card renderer', () => {
       expect(lines.some((line) => line.includes(word))).toBe(true);
     }
     expect(lines.some((line) => line.includes('included.'))).toBe(true);
+  });
+
+  it('keeps every English operating-note line inside the dark panel', () => {
+    const result = buildFacetResult(neutralAnswers, 'english-panel-result', '2026-08-24T00:00:00.000Z');
+    const context = new RecordingContext();
+
+    drawShareCard(context, result, CATALOGS.en, 1);
+
+    const operatingStart = context.textCalls.findIndex(({ value }) => value.includes('Your operating notes'));
+    const operatingEnd = context.textCalls.findIndex(
+      ({ value }, index) => index >= operatingStart && value.includes('included.'),
+    );
+    const operatingCalls = context.textCalls.slice(operatingStart, operatingEnd + 1);
+
+    expect(operatingStart).toBeGreaterThanOrEqual(0);
+    expect(operatingEnd).toBeGreaterThanOrEqual(operatingStart);
+    expect(operatingCalls.map(({ value }) => value).join(' ')).toContain('warranty not included');
+    expect(operatingCalls.at(-1)?.value).toContain('included.');
+    expect(operatingCalls.every(({ fillStyle }) => fillStyle === '#F8F5EF')).toBe(true);
+    expect(Math.max(...operatingCalls.map(({ y }) => y))).toBeLessThanOrEqual(884);
   });
 });
