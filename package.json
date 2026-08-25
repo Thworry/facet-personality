@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:file": "playwright test --config playwright.file.config.ts",
     "capture:previews": "node scripts/capture-previews.mjs"
   },
   "devDependencies": {

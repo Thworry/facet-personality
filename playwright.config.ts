@@ -22,7 +22,7 @@ export default defineConfig({
   expect: {
     timeout: 8_000,
   },
-  testIgnore: [/e2e\/online\.spec\.ts$/],
+  testIgnore: [/e2e\/(?:file|online)\.spec\.ts$/],
   reporter: [
     ['list'],
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
