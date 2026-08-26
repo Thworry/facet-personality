@@ -27,6 +27,12 @@ The quiz runs entirely in your browser. FACET has no account system, analytics s
 
 FACET is for entertainment and self-reflection. It is not a peer-reviewed psychological scale and should not be used for diagnosis, hiring, career decisions, or verdicts about a relationship.
 
+## Feedback and privacy
+
+Taking the quiz sends nothing to GitHub or the maintainer. The project has no analytics, tracking pixel, account, or remote answer upload.
+
+Opening a GitHub issue is optional and public. Please describe bugs with synthetic examples, and do not include your answer set, result history, localStorage dump, tokens, or unrelated personal data. Report suspected vulnerabilities through the [private security advisory form](https://github.com/Thworry/facet-personality/security/advisories/new); see [SECURITY.md](SECURITY.md) for the full policy.
+
 ## How scoring works
 
 Each answer uses a five-point scale. Reverse-keyed questions are flipped before each dimension's four answers are averaged and mapped to 0 to 100. Neither end of a dimension is better.
@@ -40,6 +46,8 @@ Requirements: Node.js 24 or newer and pnpm 11.19.0.
 ```bash
 pnpm install --frozen-lockfile
 pnpm dev
+pnpm lint
+pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build

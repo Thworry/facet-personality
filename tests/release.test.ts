@@ -106,6 +106,29 @@ describe('public release package', () => {
     expect(workflow).toContain('id-token: write');
   });
 
+  it('ships privacy-first security, issue, PR, and dependency policies', () => {
+    const security = readText('SECURITY.md');
+    const bug = readText('.github/ISSUE_TEMPLATE/bug-report.yml');
+    const feature = readText('.github/ISSUE_TEMPLATE/feature-request.yml');
+    const issueConfig = readText('.github/ISSUE_TEMPLATE/config.yml');
+    const pullRequest = readText('.github/pull_request_template.md');
+    const dependabot = readText('.github/dependabot.yml');
+    const readme = readText('README.md');
+    const readmeZh = readText('README.zh-CN.md');
+
+    expect(security).toContain('/security/advisories/new');
+    expect(security).toMatch(/do not include.*quiz answers/i);
+    expect(bug).toContain('Do not paste personal quiz answers');
+    expect(feature).toContain('Privacy impact');
+    expect(issueConfig).toContain('blank_issues_enabled: false');
+    expect(pullRequest).toContain('pnpm test:e2e');
+    expect(pullRequest).toMatch(/diagnos/i);
+    expect(dependabot).toContain('package-ecosystem: "npm"');
+    expect(dependabot).toContain('package-ecosystem: "github-actions"');
+    expect(readme).toContain('Feedback and privacy');
+    expect(readmeZh).toContain('反馈与隐私');
+  });
+
   it('contains real, non-trivial bilingual PNG previews', () => {
     const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 

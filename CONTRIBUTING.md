@@ -10,7 +10,8 @@ Thanks for helping make FACET clearer, kinder, and sturdier. Small, well-explain
 - For bugs, include the browser, viewport, language, exact steps, expected result, and actual result.
 - For copy changes, quote the current line and explain the ambiguity or tone problem.
 - Keep personal quiz results private. A minimal synthetic example is enough for storage or scoring bugs.
-- Security or conduct reports do not belong in a public issue. Use the repository's private reporting channels.
+- Security reports do not belong in a public issue. Use the repository's [private security advisory form](https://github.com/Thworry/facet-personality/security/advisories/new) and follow [SECURITY.md](SECURITY.md).
+- GitHub issues are optional and public. Never paste real answer sets, result history, localStorage exports, tokens, or unrelated personal data.
 
 ## Branches and commits
 
@@ -23,12 +24,14 @@ The project requires Node.js 24 or newer and pnpm 11.19.0. These are the standar
 ```bash
 pnpm install --frozen-lockfile
 pnpm dev
+pnpm lint
+pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build
 ```
 
-Stop the development server before running the browser suite if both would use the same port. A pull request should pass unit tests, browser tests, and the production build.
+Stop the development server before running the browser suite if both would use the same port. A pull request should pass lint, type checking, unit tests, browser tests, and the production build.
 
 On a fresh machine, run `pnpm exec playwright install chromium` once before the browser suite.
 
@@ -61,7 +64,8 @@ On a fresh machine, run `pnpm exec playwright install chromium` once before the 
 - 报告问题时，请写明浏览器、视口、语言、复现步骤、预期结果和实际结果。
 - 修改文案时，请贴出原句，并说明它哪里含糊、别扭或不符合语气。
 - 不要公开自己的完整测试结果。存储或计分问题使用最小化的虚构示例即可。
-- 安全问题与行为准则举报不要放在公开 Issue，请使用仓库的私密报告通道。
+- 安全问题不要放在公开 Issue。请使用仓库的 [GitHub 私密安全报告页面](https://github.com/Thworry/facet-personality/security/advisories/new)，并遵守 [SECURITY.md](SECURITY.md)。
+- GitHub Issue 完全自愿且内容公开。不要粘贴真实答案、结果历史、localStorage 导出、令牌或无关个人信息。
 
 ## 分支与提交
 
@@ -74,12 +78,14 @@ On a fresh machine, run `pnpm exec playwright install chromium` once before the 
 ```bash
 pnpm install --frozen-lockfile
 pnpm dev
+pnpm lint
+pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build
 ```
 
-如果开发服务器和浏览器测试会占用同一端口，请先停掉开发服务器。拉取请求至少应通过单元测试、浏览器测试和生产构建。
+如果开发服务器和浏览器测试会占用同一端口，请先停掉开发服务器。拉取请求至少应通过 lint、类型检查、单元测试、浏览器测试和生产构建。
 
 第一次在新环境运行时，请先执行一次 `pnpm exec playwright install chromium`，再跑浏览器测试。
 

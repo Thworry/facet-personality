@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a reproducible FACET problem without sharing personal quiz data.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping FACET behave itself. GitHub issues are public.
+        Do not paste personal quiz answers, localStorage exports, tokens, or unrelated personal information.
+  - type: checkboxes
+    id: public-consent
+    attributes:
+      label: Public report consent
+      options:
+        - label: I understand this report and its attachments will be public.
+          required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong? Keep this concise and free of personal quiz data.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Use synthetic answers or a fresh private window when possible.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: FACET language
+      options:
+        - English
+        - 简体中文
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, operating system, and device
+      placeholder: Safari 19, macOS, MacBook Air
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Sanitized screenshots (optional)
+      description: Remove answer choices, result history, names, tabs, and other identifying details first.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed personal quiz answers, storage dumps, tokens, and unrelated personal data.
+          required: true
+        - label: This is not a security vulnerability; security reports belong in a private advisory.
+          required: true
