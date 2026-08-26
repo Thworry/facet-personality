@@ -362,9 +362,7 @@ test.describe('Task 7 bilingual journeys', () => {
   test('has no console errors, request failures, or third-party requests', async ({ page }) => {
     const errors: string[] = [];
     const failures: string[] = [];
-    const foreignRequests: string[] = [];
-    const base = 'http://127.0.0.1:4173';
-    const allowed = [`${base}`, 'http://localhost:4173'];
+    const httpRequests: string[] = [];
 
     page.on('console', (message) => {
       if (message.type() === 'error') {
@@ -379,14 +377,16 @@ test.describe('Task 7 bilingual journeys', () => {
     });
     page.on('request', (request) => {
       const url = request.url();
-      if (!url.startsWith('blob:') && url.startsWith('http') && !allowed.some((prefix) => url.startsWith(prefix))) {
-        foreignRequests.push(url);
+      if (url.startsWith('http')) {
+        httpRequests.push(url);
       }
     });
 
     await completeQuiz(page, 'en');
     await page.locator('[data-action="show-atlas"]').click();
     await expect(page.locator('[data-screen="atlas"]')).toBeVisible();
+    const pageOrigin = new URL(page.url()).origin;
+    const foreignRequests = httpRequests.filter((url) => new URL(url).origin !== pageOrigin);
     expect(errors).toHaveLength(0);
     expect(failures).toHaveLength(0);
     expect(foreignRequests).toHaveLength(0);
