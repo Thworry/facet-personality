@@ -59,7 +59,7 @@ The renamed-but-continuous `.github/workflows/deploy-pages.yml` will trigger on:
 
 The `CI` job receives only `contents: read`. It installs the locked pnpm dependencies, installs Chromium, and runs lint, type checking, unit tests, local E2E, and build in that order. Pages packaging and deployment run only for `main` push/manual events after `CI` succeeds, and only those jobs receive `pages: write` and `id-token: write`.
 
-Current stable GitHub Action releases will be pinned to full commit SHAs with readable version comments. Dependabot will keep both npm and GitHub Action references current.
+Stable GitHub Action releases will be pinned to full commit SHAs with readable version comments. New npm tooling will use exact stable versions that have cleared the repository's minimum-release-age policy; Dependabot will keep both npm and GitHub Action references current.
 
 ## Main-branch ruleset
 

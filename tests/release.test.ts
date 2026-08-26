@@ -67,8 +67,43 @@ describe('public release package', () => {
     expect(workflow).toContain('id-token: write');
     expect(workflow).toContain('pnpm install --frozen-lockfile');
     expect(workflow).toContain('pnpm test:e2e');
-    expect(workflow).toContain('actions/deploy-pages@v4');
+    expect(workflow).toContain('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1');
+    expect(workflow).toContain('pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86');
+    expect(workflow).toContain('actions/setup-node@820762786026740c76f36085b0efc47a31fe5020');
+    expect(workflow).toContain('actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d');
+    expect(workflow).toContain('actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9');
+    expect(workflow).toContain('actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128');
     expect(workflow).not.toMatch(/personal access token|GH_PAT|secrets\.[A-Z_]*TOKEN/i);
+  });
+
+  it('gates pull requests and Pages deployment behind the complete CI suite', () => {
+    const pkg = JSON.parse(readText('package.json')) as {
+      scripts?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const eslintConfig = readText('eslint.config.js');
+    const workspace = readText('pnpm-workspace.yaml');
+    const workflow = readText('.github/workflows/deploy-pages.yml');
+
+    expect(pkg.scripts?.lint).toBe('eslint .');
+    expect(pkg.scripts?.typecheck).toBe('tsc --noEmit');
+    expect(pkg.devDependencies?.eslint).toBe('10.8.1');
+    expect(pkg.devDependencies?.['typescript-eslint']).toBe('8.67.0');
+    expect(workspace).toContain("'@typescript-eslint/tsconfig-utils': 8.67.0");
+    expect(workspace).toContain("'@typescript-eslint/types': 8.67.0");
+    expect(workspace).not.toContain('minimumReleaseAgeExclude');
+    expect(eslintConfig).toContain('globals.browser');
+    expect(eslintConfig).toContain('globals.node');
+    expect(workflow).toMatch(/pull_request:\s*\n\s*branches: \[main\]/);
+    expect(workflow).toContain('name: CI');
+    expect(workflow).toContain('run: pnpm lint');
+    expect(workflow).toContain('run: pnpm typecheck');
+    expect(workflow).toContain('run: pnpm test');
+    expect(workflow).toContain('run: pnpm test:e2e');
+    expect(workflow).toContain('run: pnpm build');
+    expect(workflow).toContain("github.event_name != 'pull_request'");
+    expect(workflow).toContain('pages: write');
+    expect(workflow).toContain('id-token: write');
   });
 
   it('contains real, non-trivial bilingual PNG previews', () => {

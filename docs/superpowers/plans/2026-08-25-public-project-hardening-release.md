@@ -28,8 +28,12 @@
 **Files:**
 - Modify: `package.json`
 - Modify: `pnpm-lock.yaml`
+- Modify: `pnpm-workspace.yaml`
 - Create: `eslint.config.js`
 - Modify: `.github/workflows/deploy-pages.yml`
+- Modify: `e2e/app.spec.ts`
+- Modify: `src/app/controller.ts`
+- Modify: `src/domain/share.ts`
 - Modify: `tests/release.test.ts`
 
 **Interfaces:**
@@ -47,12 +51,16 @@ it('gates pull requests and Pages deployment behind the complete CI suite', () =
     devDependencies?: Record<string, string>;
   };
   const eslintConfig = readText('eslint.config.js');
+  const workspace = readText('pnpm-workspace.yaml');
   const workflow = readText('.github/workflows/deploy-pages.yml');
 
   expect(pkg.scripts?.lint).toBe('eslint .');
   expect(pkg.scripts?.typecheck).toBe('tsc --noEmit');
-  expect(pkg.devDependencies?.eslint).toBe('10.9.1');
-  expect(pkg.devDependencies?.['typescript-eslint']).toBe('8.68.0');
+  expect(pkg.devDependencies?.eslint).toBe('10.8.1');
+  expect(pkg.devDependencies?.['typescript-eslint']).toBe('8.67.0');
+  expect(workspace).toContain("'@typescript-eslint/tsconfig-utils': 8.67.0");
+  expect(workspace).toContain("'@typescript-eslint/types': 8.67.0");
+  expect(workspace).not.toContain('minimumReleaseAgeExclude');
   expect(eslintConfig).toContain("globals.browser");
   expect(eslintConfig).toContain("globals.node");
   expect(workflow).toMatch(/pull_request:\s*\n\s*branches: \[main\]/);
@@ -95,9 +103,9 @@ Run:
 
 ```bash
 pnpm add --save-dev --save-exact \
-  eslint@10.9.1 \
+  eslint@10.8.1 \
   @eslint/js@10.0.1 \
-  typescript-eslint@8.68.0 \
+  typescript-eslint@8.67.0 \
   globals@17.11.0
 ```
 
@@ -111,6 +119,14 @@ Add these scripts without changing the existing build semantics:
     "build": "tsc --noEmit && vite build"
   }
 }
+```
+
+In `pnpm-workspace.yaml`, pin the two range-resolved TypeScript-ESLint internals so the complete family remains on the age-cleared `8.67.0` release and the lockfile needs no minimum-release-age exception:
+
+```yaml
+overrides:
+  '@typescript-eslint/tsconfig-utils': 8.67.0
+  '@typescript-eslint/types': 8.67.0
 ```
 
 - [ ] **Step 4: Create the minimal flat ESLint configuration**
@@ -257,7 +273,7 @@ Expected: all commands PASS; Vitest reports the updated exact count; `dist/index
 Run:
 
 ```bash
-git add package.json pnpm-lock.yaml eslint.config.js .github/workflows/deploy-pages.yml tests/release.test.ts
+git add package.json pnpm-lock.yaml pnpm-workspace.yaml eslint.config.js .github/workflows/deploy-pages.yml e2e/app.spec.ts src/app/controller.ts src/domain/share.ts tests/release.test.ts docs/superpowers/specs/2026-08-25-public-project-hardening-release-design.md docs/superpowers/plans/2026-08-25-public-project-hardening-release.md
 git commit -m "ci: verify pull requests before Pages deployment"
 git show -s --format='%h %an <%ae> %s'
 ```

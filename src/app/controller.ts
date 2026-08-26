@@ -177,7 +177,7 @@ export function createAppController(
       clearProgress(storage);
       shareMessage = '';
       dispatch({ type: 'SHOW_RESULT', result });
-    } catch (error) {
+    } catch {
       const currentCopy = getCatalog(state.locale);
       const status = root.querySelector<HTMLElement>('[data-quiz-status]');
       if (status !== null) {
