@@ -10,16 +10,23 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:file": "playwright test --config playwright.file.config.ts",
-    "capture:previews": "node scripts/capture-previews.mjs"
+    "capture:previews": "node scripts/capture-previews.mjs",
+    "capture:social": "node scripts/capture-social-preview.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.55.0",
     "@types/node": "24.13.3",
+    "eslint": "10.8.1",
+    "globals": "17.11.0",
     "typescript": "5.9.2",
+    "typescript-eslint": "8.67.0",
     "vite": "7.1.3",
     "vite-plugin-singlefile": "2.3.0",
     "vitest": "3.2.4"

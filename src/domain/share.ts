@@ -64,7 +64,6 @@ function drawWrappedText(
       if (context.measureText(candidate).width > maxWidth) {
         if (current !== '') {
           lines.push(current);
-          current = '';
         }
         if (context.measureText(token).width > maxWidth) {
           const fallbackTokens = splitToken(token);

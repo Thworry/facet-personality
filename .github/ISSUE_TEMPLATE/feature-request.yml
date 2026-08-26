@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest a focused improvement that preserves FACET's local-first boundaries.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A useful feature starts with a real use case, not a surveillance-shaped shortcut.
+        Issues are public, so please use synthetic examples and omit personal quiz data.
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What are you trying to accomplish, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the smallest useful version of the idea.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What can users do today, and why is it not enough?
+    validations:
+      required: true
+  - type: textarea
+    id: privacy-impact
+    attributes:
+      label: Privacy impact
+      description: Does this add storage, network traffic, identifiers, analytics, or third-party services? Explain even if the answer is no.
+    validations:
+      required: true
+  - type: textarea
+    id: language-accessibility
+    attributes:
+      label: Bilingual copy and accessibility impact
+      description: Note the Chinese/English wording, keyboard, screen-reader, motion, and narrow-screen implications.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Product boundary confirmation
+      options:
+        - label: This proposal does not turn FACET into a diagnostic, clinical, hiring, career-fit, or relationship-verdict tool.
+          required: true
+        - label: This proposal does not require uploading personal quiz answers or adding hidden tracking.
+          required: true

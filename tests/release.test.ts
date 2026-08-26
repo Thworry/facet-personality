@@ -67,8 +67,87 @@ describe('public release package', () => {
     expect(workflow).toContain('id-token: write');
     expect(workflow).toContain('pnpm install --frozen-lockfile');
     expect(workflow).toContain('pnpm test:e2e');
-    expect(workflow).toContain('actions/deploy-pages@v4');
+    expect(workflow).toContain('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1');
+    expect(workflow).toContain('pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86');
+    expect(workflow).toContain('actions/setup-node@820762786026740c76f36085b0efc47a31fe5020');
+    expect(workflow).toContain('actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d');
+    expect(workflow).toContain('actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9');
+    expect(workflow).toContain('actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128');
     expect(workflow).not.toMatch(/personal access token|GH_PAT|secrets\.[A-Z_]*TOKEN/i);
+  });
+
+  it('gates pull requests and Pages deployment behind the complete CI suite', () => {
+    const pkg = JSON.parse(readText('package.json')) as {
+      scripts?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const eslintConfig = readText('eslint.config.js');
+    const workspace = readText('pnpm-workspace.yaml');
+    const workflow = readText('.github/workflows/deploy-pages.yml');
+
+    expect(pkg.scripts?.lint).toBe('eslint .');
+    expect(pkg.scripts?.typecheck).toBe('tsc --noEmit');
+    expect(pkg.devDependencies?.eslint).toBe('10.8.1');
+    expect(pkg.devDependencies?.['typescript-eslint']).toBe('8.67.0');
+    expect(workspace).toContain("'@typescript-eslint/tsconfig-utils': 8.67.0");
+    expect(workspace).toContain("'@typescript-eslint/types': 8.67.0");
+    expect(workspace).not.toContain('minimumReleaseAgeExclude');
+    expect(eslintConfig).toContain('globals.browser');
+    expect(eslintConfig).toContain('globals.node');
+    expect(workflow).toMatch(/pull_request:\s*\n\s*branches: \[main\]/);
+    expect(workflow).toContain('name: CI');
+    expect(workflow).toContain('run: pnpm lint');
+    expect(workflow).toContain('run: pnpm typecheck');
+    expect(workflow).toContain('run: pnpm test');
+    expect(workflow).toContain('run: pnpm test:e2e');
+    expect(workflow).toContain('run: pnpm build');
+    expect(workflow).toContain("github.event_name != 'pull_request'");
+    expect(workflow).toContain('pages: write');
+    expect(workflow).toContain('id-token: write');
+  });
+
+  it('ships privacy-first security, issue, PR, and dependency policies', () => {
+    const security = readText('SECURITY.md');
+    const bug = readText('.github/ISSUE_TEMPLATE/bug-report.yml');
+    const feature = readText('.github/ISSUE_TEMPLATE/feature-request.yml');
+    const issueConfig = readText('.github/ISSUE_TEMPLATE/config.yml');
+    const pullRequest = readText('.github/pull_request_template.md');
+    const dependabot = readText('.github/dependabot.yml');
+    const readme = readText('README.md');
+    const readmeZh = readText('README.zh-CN.md');
+
+    expect(security).toContain('/security/advisories/new');
+    expect(security).toMatch(/do not include.*quiz answers/i);
+    expect(bug).toContain('Do not paste personal quiz answers');
+    expect(feature).toContain('Privacy impact');
+    expect(issueConfig).toContain('blank_issues_enabled: false');
+    expect(pullRequest).toContain('pnpm test:e2e');
+    expect(pullRequest).toMatch(/diagnos/i);
+    expect(dependabot).toContain('package-ecosystem: "npm"');
+    expect(dependabot).toContain('package-ecosystem: "github-actions"');
+    expect(readme).toContain('Feedback and privacy');
+    expect(readmeZh).toContain('反馈与隐私');
+  });
+
+  it('contains a deterministic social card and honest v0.1.0 notes', () => {
+    const social = readBytes('docs/assets/social-preview.png');
+    const socialBuffer = Buffer.from(social);
+    const changelog = readText('CHANGELOG.md');
+    const readme = readText('README.md');
+    const readmeZh = readText('README.zh-CN.md');
+    const pkg = JSON.parse(readText('package.json')) as { scripts?: Record<string, string> };
+
+    expect(pkg.scripts?.['capture:social']).toBe('node scripts/capture-social-preview.mjs');
+    expect(social.byteLength).toBeGreaterThan(20_000);
+    expect([...social.slice(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    expect(socialBuffer.readUInt32BE(16)).toBe(1280);
+    expect(socialBuffer.readUInt32BE(20)).toBe(640);
+    expect(readme).toContain('docs/assets/social-preview.png');
+    expect(readmeZh).toContain('docs/assets/social-preview.png');
+    expect(changelog).toContain('## v0.1.0 — 2026-08-25');
+    expect(changelog).toMatch(/not.*clinical|not.*diagnos/i);
+    expect(changelog).toContain('cross-cultural psychometric equivalence');
+    expect(changelog).not.toMatch(/users|accuracy rate|most accurate|clinically validated/i);
   });
 
   it('contains real, non-trivial bilingual PNG previews', () => {

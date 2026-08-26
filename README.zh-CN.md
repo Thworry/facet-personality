@@ -1,6 +1,8 @@
+# FACET｜人格切面
+
 [English README](README.md)
 
-# FACET｜人格切面
+![FACET 中英双语、本地优先的人格自我观察项目预览](docs/assets/social-preview.png)
 
 FACET 是一个中英双语、本地优先的人格自我观察测试。它用 32 个日常场景拆出 6 条核心倾向和 2 个近期状态信号，不做诊断，也不举办“最稀有人格”颁奖礼。
 
@@ -27,6 +29,12 @@ FACET 先问你平时怎么做，再用最后 8 题看看最近两周的负荷�
 
 FACET 只用于娱乐和自我观察。它不是经过同行评议的心理量表，也不适合拿来做心理诊断、招聘筛选、职业决策或关系判决。
 
+## 反馈与隐私
+
+答题过程不会向 GitHub 或维护者发送任何内容。项目没有分析统计、追踪像素、账号系统，也不会远程上传答案。
+
+GitHub Issue 完全自愿，而且内容公开。请用虚构示例描述问题，不要附上自己的答案、结果历史、localStorage 导出、令牌或无关个人信息。疑似安全漏洞请通过 [GitHub 私密安全报告页面](https://github.com/Thworry/facet-personality/security/advisories/new)提交；完整规则见 [SECURITY.md](SECURITY.md)。
+
 ## 分数怎么算
 
 每题使用五级刻度。反向题会先反转分值，同一维度的 4 道题再取平均并换算为 0 到 100。维度两端没有高低优劣。
@@ -40,6 +48,8 @@ FACET 只用于娱乐和自我观察。它不是经过同行评议的心理量�
 ```bash
 pnpm install --frozen-lockfile
 pnpm dev
+pnpm lint
+pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build

@@ -4,5 +4,9 @@ packages:
 allowBuilds:
   esbuild: true
 
+overrides:
+  '@typescript-eslint/tsconfig-utils': 8.67.0
+  '@typescript-eslint/types': 8.67.0
+
 onlyBuiltDependencies:
   - esbuild
