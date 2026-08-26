@@ -1,6 +1,8 @@
+# FACET｜人格切面
+
 [English README](README.md)
 
-# FACET｜人格切面
+![FACET 中英双语、本地优先的人格自我观察项目预览](docs/assets/social-preview.png)
 
 FACET 是一个中英双语、本地优先的人格自我观察测试。它用 32 个日常场景拆出 6 条核心倾向和 2 个近期状态信号，不做诊断，也不举办“最稀有人格”颁奖礼。
 

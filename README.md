@@ -1,6 +1,8 @@
+# FACET · Personality Facets
+
 [中文说明](README.zh-CN.md)
 
-# FACET · Personality Facets
+![FACET bilingual local-first personality reflection project preview](docs/assets/social-preview.png)
 
 FACET is a bilingual, local-first personality reflection quiz built from 32 everyday scenarios. It maps six core tendencies and two recent-state signals without pretending to diagnose you, or crown a rarest type.
 

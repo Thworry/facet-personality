@@ -129,6 +129,27 @@ describe('public release package', () => {
     expect(readmeZh).toContain('反馈与隐私');
   });
 
+  it('contains a deterministic social card and honest v0.1.0 notes', () => {
+    const social = readBytes('docs/assets/social-preview.png');
+    const socialBuffer = Buffer.from(social);
+    const changelog = readText('CHANGELOG.md');
+    const readme = readText('README.md');
+    const readmeZh = readText('README.zh-CN.md');
+    const pkg = JSON.parse(readText('package.json')) as { scripts?: Record<string, string> };
+
+    expect(pkg.scripts?.['capture:social']).toBe('node scripts/capture-social-preview.mjs');
+    expect(social.byteLength).toBeGreaterThan(20_000);
+    expect([...social.slice(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    expect(socialBuffer.readUInt32BE(16)).toBe(1280);
+    expect(socialBuffer.readUInt32BE(20)).toBe(640);
+    expect(readme).toContain('docs/assets/social-preview.png');
+    expect(readmeZh).toContain('docs/assets/social-preview.png');
+    expect(changelog).toContain('## v0.1.0 — 2026-08-25');
+    expect(changelog).toMatch(/not.*clinical|not.*diagnos/i);
+    expect(changelog).toContain('cross-cultural psychometric equivalence');
+    expect(changelog).not.toMatch(/users|accuracy rate|most accurate|clinically validated/i);
+  });
+
   it('contains real, non-trivial bilingual PNG previews', () => {
     const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
